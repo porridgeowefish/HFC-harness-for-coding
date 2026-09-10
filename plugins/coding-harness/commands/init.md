@@ -1,0 +1,6 @@
+---
+description: Initialize only the canonical Coding Harness document system.
+argument-hint: "[--phase prepare|finalize] [--apply --knowledge <draft.json>]"
+---
+
+In the current project directory, the top-level natural-language Skill is the primary entry. It creates a dependency-driven initialization run: a reconnaissance subagent writes the full path skeleton first; the coordinator assigns every readable path exactly once to disjoint engineering/business readers; synthesis and Rules readers wait for their inputs and write real content directly. The CLI is a deterministic fallback: `node "${CODEBUDDY_PLUGIN_ROOT}/bin/harness.mjs" init --phase prepare` writes static navigation and the path-only tree, while `init --phase finalize --knowledge <runtime-draft>` applies the completed facts after the checklist conversation. When subagents backfill files between phases, prepare and finalize must remain in the same top-level orchestration session; a standalone finalize without that session context fails closed on existing long-lived assets instead of overwriting them. Do not add a digest, hash, CAS or second review round. A single administrator commits the shared contracts to Git; other members pull them.

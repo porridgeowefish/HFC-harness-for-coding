@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Canonical Coding Harness state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "revision", "task_id", "title", "operation", "rules", "stage", "step", "status", "summary", "next_action", "artifacts", "tasks", "gates", "approvals", "mr", "review", "knowledge_review", "blockers", "created_at", "updated_at"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "revision": {"type": "integer", "minimum": 0},
+    "task_id": {"type": "string", "pattern": "^wf-[0-9]{8}-[a-z0-9]{6}$"},
+    "title": {"type": "string", "minLength": 1},
+    "operation": {"type": "string"},
+    "rules": {"type": "array", "items": {"type": "string"}},
+    "stage": {"enum": ["requirement", "design", "development", "review", "knowledge_review", "completed"]},
+    "step": {"type": "string"},
+    "status": {"enum": ["pending", "running", "waiting_human", "blocked", "completed", "failed"]},
+    "summary": {"type": "string"},
+    "next_action": {"type": "string"},
+    "artifacts": {"type": "object", "required": ["evidence_refs"], "properties": {"evidence_refs": {"type": "array"}}},
+    "tasks": {"type": "array"},
+    "gates": {"type": "object"},
+    "approvals": {"type": "object"},
+    "mr": {"type": "object"},
+    "review": {"type": "object"},
+    "knowledge_review": {"type": "object"},
+    "blockers": {"type": "array"},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"}
+  }
+}

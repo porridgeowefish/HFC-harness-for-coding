@@ -1,0 +1,13 @@
+{
+  "name": "@ai-market/coding-harness",
+  "version": "0.7.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/canonical-*.test.mjs",
+    "validate": "node scripts/validate-package.mjs"
+  }
+}

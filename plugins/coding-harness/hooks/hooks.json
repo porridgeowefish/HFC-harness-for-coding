@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CODEBUDDY_PLUGIN_ROOT}/hooks/session-start.mjs\"", "timeout": 10 }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|write_to_file|replace_in_file|Bash|execute_command",
+        "hooks": [
+          { "type": "command", "command": "node \"${CODEBUDDY_PLUGIN_ROOT}/hooks/pre-tool-use.mjs\"", "timeout": 30 }
+        ]
+      }
+    ]
+  }
+}
