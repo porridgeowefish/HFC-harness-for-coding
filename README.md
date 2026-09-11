@@ -1,12 +1,12 @@
 # AI Coding Harness · CodeBuddy Plugin
 
-发布版本：`0.7.0`
+发布版本：`0.8.0`
 
 这是给 CodeBuddy 的团队开发流程插件。它通过自然语言引导项目完成接入、需求澄清、设计、开发、评审和知识回写；不是要求成员手工维护 workflow JSON 的项目模板。
 
 ## 先理解这个压缩包
 
-`ai-market-0.7.0.zip` 是一个**本地 Marketplace 快照**，不是可直接放进项目 `.codebuddy/` 的单插件目录。解压后的根目录必须保持以下相对结构，不能只拷贝其中一个子目录：
+`ai-market-0.8.0.zip` 是一个**本地 Marketplace 快照**，不是可直接放进项目 `.codebuddy/` 的单插件目录。解压后的根目录必须保持以下相对结构，不能只拷贝其中一个子目录：
 
 ```text
 <解压目录>/
@@ -28,11 +28,11 @@
 
 ## 从 ZIP 安装：CodeBuddy 桌面端
 
-1. 将 ZIP 解压到稳定位置。例如 Windows：`D:\Tools\ai-market-0.7.0`。不要在临时下载目录中直接使用，后续移动或删除该目录会使本地 Marketplace 失效。
+1. 将 ZIP 解压到稳定位置。例如 Windows：`D:\Tools\ai-market-0.8.0`。不要在临时下载目录中直接使用，后续移动或删除该目录会使本地 Marketplace 失效。
 2. 在 CodeBuddy Desktop 的 CodeBuddy Code 对话/命令输入框执行：
 
    ```text
-   /plugin marketplace add "D:\Tools\ai-market-0.7.0"
+   /plugin marketplace add "D:\Tools\ai-market-0.8.0"
    /plugin install coding-harness@ai-market
    /reload-plugins
    ```
@@ -47,7 +47,7 @@
 先解压，再在终端运行。Windows 路径请改成你的实际解压目录：
 
 ```powershell
-codebuddy plugin marketplace add "D:\Tools\ai-market-0.7.0" --name ai-market
+codebuddy plugin marketplace add "D:\Tools\ai-market-0.8.0" --name ai-market
 codebuddy plugin install coding-harness@ai-market --scope user
 codebuddy plugin list --json
 ```
@@ -89,6 +89,8 @@ Git Marketplace 会物化完整插件目录，因此适合本插件这种包含 
 
 一次自然语言调用最多推进当前 workflow 的一个节点。比如“开始一轮开发”只会建立全量原始材料索引、记录本次用户原话并停在 `source_materials`；下一次明确调用才推进候选评审。它不会因为描述看起来完整就自动生成需求、设计和代码。
 
+设计完成后，插件先生成 `development-contract.md`，再生成任务包。它是所有开发任务共同读取的唯一契约正文，按需包含 HTTP API、公共接口、数据、跨任务集成和必要的共享行为；普通状态、权限和行为结果仍写入验收标准。任务包只引用契约 ID，不复制契约正文。实现中需要改变契约时必须退回设计并重新确认任务包。
+
 ## 生成什么、需要提交什么
 
 接入完成后，业务仓库只有这一套文档体系：
@@ -124,9 +126,9 @@ codebuddy plugin list --json
 
 ## 版本与验收
 
-本包版本为 `0.7.0`。发布前执行 `npm test --prefix plugins/coding-harness` 与 `npm run validate --prefix plugins/coding-harness`；详细的结构与模板核查记录位于源码仓库的 `docs/目录与模板二次核查报告.md`。
+本包版本为 `0.8.0`。发布前执行 `npm test --prefix plugins/coding-harness` 与 `npm run validate --prefix plugins/coding-harness`；详细的结构与模板核查记录位于源码仓库的 `docs/目录与模板二次核查报告.md`。
 
-规范来源为《技术设计-流程模块与交接协议》、`ADR-latest.md` 与 [0.7.0 初始化与 Markdown 合同](docs/superpowers/specs/2026-09-09-v07-distributed-initialization-and-markdown-contract.md)。
+当前规范来源为《技术设计-流程模块与交接协议》、`ADR-latest.md` 及 [0.8.0 共同开发契约](docs/superpowers/specs/2026-09-10-v08-shared-development-contract.md)。[0.7.0 初始化设计](docs/superpowers/specs/2026-09-09-v07-distributed-initialization-and-markdown-contract.md)仅保留为历史记录，其中与 0.8.0 冲突的流程文件数量和交接定义均已失效。
 
 ## 验证
 

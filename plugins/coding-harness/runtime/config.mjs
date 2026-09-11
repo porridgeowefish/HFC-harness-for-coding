@@ -21,7 +21,7 @@ export function validateHarnessConfig(value) {
   const errors = [];
   exactKeys(value, TOP_LEVEL, 'top-level', errors);
   if (value?.schemaVersion !== '1.0') errors.push('schemaVersion must be 1.0');
-  if (value?.adapterVersion !== '0.7.0') errors.push('adapterVersion must be 0.7.0');
+  if (value?.adapterVersion !== '0.8.0') errors.push('adapterVersion must be 0.8.0');
   exactKeys(value?.project, PROJECT_KEYS, 'project', errors);
   if (!Array.isArray(value?.project?.stack) || value?.project?.stack.some((item) => typeof item !== 'string')) errors.push('project.stack must be a string array');
   if (typeof value?.project?.packageManager !== 'string') errors.push('project.packageManager must be a string');

@@ -1,14 +1,16 @@
 import { randomBytes } from 'node:crypto';
+import { execFile } from 'node:child_process';
 import { access, mkdir, open, readFile, readdir, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 import { WORKFLOW_ARTIFACTS, rulesForOperation } from './contract.mjs';
 import { doctorProject } from './doctor.mjs';
 import { refreshWorkflowNavigation, refreshFileTree } from './navigation.mjs';
 import { runGateProfile } from './gates.mjs';
 import { scanProjectMaterials } from './onboarding.mjs';
-import { validateCompletedDocument } from './markdown-contract.mjs';
+import { validateCompletedDocument, validateTaskContractReferences } from './markdown-contract.mjs';
 
 const pluginRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const templateRoot = join(pluginRoot, 'templates', 'workflow');
@@ -37,6 +39,7 @@ const ACTION_KEYS = Object.freeze({
   record_blocker: new Set(['expectedRevision', 'action', 'reason'])
 });
 const locks = new Map();
+const execFileAsync = promisify(execFile);
 
 async function exists(path) { try { await access(path, constants.F_OK); return true; } catch { return false; } }
 function tableCell(value) { return String(value).replace(/[\r\n|]/g, ' ').trim(); }
@@ -103,7 +106,7 @@ async function requireCompletedArtifact(root, state, artifact, action) {
 async function requireArtifactsForAction(root, state, action, approvalKey = null) {
   const required = [];
   const requirementArtifacts = ['source-materials.md', 'candidate-review.md', 'requirement.md'];
-  const designArtifacts = [...requirementArtifacts, 'design-alignment.md', 'design-decision.md', 'task-package.md'];
+  const designArtifacts = [...requirementArtifacts, 'design-alignment.md', 'design-decision.md', 'development-contract.md', 'task-package.md'];
   const developmentArtifacts = [...designArtifacts, 'development-summary.md'];
   if (action === 'record_source_materials') required.push('source-materials.md');
   if (action === 'record_candidate_review') required.push('source-materials.md', 'candidate-review.md');
@@ -120,10 +123,50 @@ async function requireArtifactsForAction(root, state, action, approvalKey = null
     if (state.stage === 'design') required.push(...designArtifacts);
     if (state.stage === 'development') required.push(...developmentArtifacts);
     if (state.stage === 'review') required.push(...developmentArtifacts);
-    if (state.stage === 'knowledge_review') required.push(...developmentArtifacts, 'knowledge-update-review.md');
+    if (state.stage === 'knowledge_review') required.push(...developmentArtifacts, 'knowledge-update-review.md', 'merge-report.md');
   }
   if (action === 'record_review') required.push(...developmentArtifacts);
   for (const artifact of required) await requireCompletedArtifact(root, state, artifact, action);
+}
+
+async function requireTaskContractReferences(root, state) {
+  const directory = join(root, 'docs', 'workflows', state.task_id);
+  const contractText = await readFile(join(directory, 'development-contract.md'), 'utf8');
+  const packageText = await readFile(join(directory, 'task-package.md'), 'utf8');
+  const errors = validateTaskContractReferences(contractText, packageText);
+  if (errors.length) throw new Error(errors.join('; '));
+}
+
+const APPROVED_DESIGN_ARTIFACTS = ['design-decision.md', 'development-contract.md', 'task-package.md'];
+async function git(root, args) {
+  try {
+    const result = await execFileAsync('git', ['-C', root, '-c', 'core.quotepath=false', ...args], { windowsHide: true, encoding: 'utf8' });
+    return { code: 0, stdout: result.stdout.trim(), stderr: result.stderr.trim() };
+  } catch (error) {
+    return { code: Number.isInteger(error.code) ? error.code : -1, stdout: String(error.stdout ?? '').trim(), stderr: String(error.stderr ?? error.message).trim() };
+  }
+}
+function approvedDesignPaths(state) { return APPROVED_DESIGN_ARTIFACTS.map((file) => workflowPath(state.task_id, file)); }
+async function captureApprovedDesignCommit(root, state) {
+  const paths = approvedDesignPaths(state);
+  const repository = await git(root, ['rev-parse', '--show-toplevel']);
+  if (repository.code !== 0) throw new Error('Git repository is required before task-package approval');
+  const tracked = await git(root, ['ls-files', '--cached', '--', ...paths]);
+  const trackedSet = new Set(tracked.stdout.split(/\r?\n/).filter(Boolean).map((path) => path.replaceAll('\\', '/')));
+  const missing = paths.filter((path) => !trackedSet.has(path));
+  if (missing.length) throw new Error(`approved design artifacts must be tracked by Git: ${missing.join(', ')}`);
+  const status = await git(root, ['status', '--porcelain', '--untracked-files=all', '--', ...paths]);
+  if (status.code !== 0 || status.stdout) throw new Error('approved design artifacts must be committed and clean in Git');
+  const head = await git(root, ['rev-parse', 'HEAD']);
+  if (head.code !== 0 || !head.stdout) throw new Error('unable to record approved design Git commit');
+  return head.stdout;
+}
+async function requireApprovedDesignUnchanged(root, state) {
+  const commit = state.approvals.task_package?.commit;
+  if (!commit) throw new Error('task-package approval must record a Git commit');
+  const diff = await git(root, ['diff', '--quiet', commit, '--', ...approvedDesignPaths(state)]);
+  if (diff.code === 1) throw new Error('design artifacts changed since task-package approval');
+  if (diff.code !== 0) throw new Error(`unable to verify approved design artifacts: ${diff.stderr}`);
 }
 function time(value) { return typeof value === 'string' && !Number.isNaN(Date.parse(value)) && new Date(value).toISOString() === value; }
 function workflowPath(id, file) { return `docs/workflows/${id}/${file}`; }
@@ -213,20 +256,24 @@ function requireApproval(state, key) {
 
 async function advance(root, state) {
   if (state.stage === 'requirement') { requireApproval(state, 'requirement_published'); await requireArtifactsForAction(root, state, 'advance'); setPhase(state, 'design'); }
-  else if (state.stage === 'design') { requireApproval(state, 'task_package'); await requireArtifactsForAction(root, state, 'advance'); setPhase(state, 'development'); }
+  else if (state.stage === 'design') { requireApproval(state, 'task_package'); await requireArtifactsForAction(root, state, 'advance'); await requireTaskContractReferences(root, state); await requireApprovedDesignUnchanged(root, state); setPhase(state, 'development'); }
   else if (state.stage === 'development') {
+    await requireApprovedDesignUnchanged(root, state);
     if (!sameCommit(state.gates.development, state.mr.headCommit) || state.gates.development.status !== 'passed') throw new Error('development gate must pass for current MR commit');
     if (!sameCommit(state.approvals.development_summary, state.mr.headCommit)) throw new Error('development summary approval is required for current MR commit');
     await requireArtifactsForAction(root, state, 'advance');
     setPhase(state, 'review');
   } else if (state.stage === 'review') {
+    await requireApprovedDesignUnchanged(root, state);
     if (state.review.verdict !== 'pass' || state.review.reviewedCommit !== state.mr.headCommit) throw new Error('independent review must pass for current MR commit');
     setPhase(state, 'knowledge_review');
   } else if (state.stage === 'knowledge_review') {
+    await requireApprovedDesignUnchanged(root, state);
     const review = state.knowledge_review;
     if (!review.items.length || review.items.some((item) => item.decision === '待人裁定') || review.commit !== state.mr.headCommit || !review.approved_by || !time(review.approved_at)) throw new Error('knowledge review requires complete approved classification for current MR commit');
     requireApproval(state, 'knowledge_update_review');
     if (!state.mr.merge_report || state.mr.merge_report.commit !== state.mr.headCommit || state.mr.status !== 'merged') throw new Error('knowledge review approval, current merge report and MR merge are required');
+    await requireArtifactsForAction(root, state, 'advance');
     setPhase(state, 'completed');
   } else throw new Error('workflow is already completed');
 }
@@ -266,7 +313,9 @@ async function applyAction(root, state, request) {
     const allowed = state.stage === 'requirement' && state.step === 'publish_requirement' ? ['requirement_published'] : state.stage === 'design' ? ['task_package'] : state.stage === 'development' ? ['development_summary'] : state.stage === 'knowledge_review' ? ['knowledge_update_review'] : [];
     if (!approval || Object.keys(approval).some((key) => !['key', 'by', 'at'].includes(key)) || !allowed.includes(approval.key) || typeof approval.by !== 'string' || !approval.by.trim() || !time(approval.at)) throw new Error('invalid approval action');
     await requireArtifactsForAction(root, state, request.action, approval.key);
-    const record = { status: 'approved', by: approval.by.trim(), at: approval.at, commit: state.mr.headCommit ?? null };
+    if (approval.key === 'task_package') await requireTaskContractReferences(root, state);
+    const commit = approval.key === 'task_package' ? await captureApprovedDesignCommit(root, state) : state.mr.headCommit ?? null;
+    const record = { status: 'approved', by: approval.by.trim(), at: approval.at, commit };
     state.approvals[approval.key] = record;
     const next = {
       requirement_published: ['requirement published; awaiting next instruction to enter design', 'advance_to_design'],

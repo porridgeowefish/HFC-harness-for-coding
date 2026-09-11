@@ -11,7 +11,7 @@ test('gate runner executes configured checks in order and closes on required fai
   await mkdir(join(root, '.codebuddy'), { recursive: true });
   const check = (id, source, required) => ({ id, command: process.execPath, args: ['-e', source], cwd: '.', timeoutSeconds: 5, required });
   const config = {
-    schemaVersion: '1.0', adapterVersion: '0.7.0',
+    schemaVersion: '1.0', adapterVersion: '0.8.0',
     project: { stack: [], packageManager: 'none', sourceRoots: [], testRoots: [] },
     protectedContracts: ['CODEBUDDY.md'],
     gates: {
@@ -54,7 +54,7 @@ test('gate runner rejects a profile cwd that resolves outside the project', asyn
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(join(root, '.codebuddy'), { recursive: true });
   const config = {
-    schemaVersion: '1.0', adapterVersion: '0.7.0',
+    schemaVersion: '1.0', adapterVersion: '0.8.0',
     project: { stack: [], packageManager: 'none', sourceRoots: [], testRoots: [] },
     protectedContracts: ['CODEBUDDY.md'],
     gates: { preCommit: [{ id: 'escape', command: process.execPath, args: ['-v'], cwd: '..', timeoutSeconds: 5, required: true }], ci: [] },
@@ -69,7 +69,7 @@ test('gate runner fails closed when a profile has no configured checks', async (
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(join(root, '.codebuddy'), { recursive: true });
   const config = {
-    schemaVersion: '1.0', adapterVersion: '0.7.0',
+    schemaVersion: '1.0', adapterVersion: '0.8.0',
     project: { stack: [], packageManager: 'none', sourceRoots: [], testRoots: [] },
     protectedContracts: ['CODEBUDDY.md'], gates: { preCommit: [], ci: [] },
     integrations: { workItem: 'none', codeReview: 'none', ci: 'none' }
@@ -86,7 +86,7 @@ test('gate runner executes npm without enabling a shell', { skip: process.platfo
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(join(root, '.codebuddy'), { recursive: true });
   const config = {
-    schemaVersion: '1.0', adapterVersion: '0.7.0',
+    schemaVersion: '1.0', adapterVersion: '0.8.0',
     project: { stack: ['node'], packageManager: 'npm', sourceRoots: [], testRoots: [] },
     protectedContracts: ['CODEBUDDY.md'],
     gates: { preCommit: [{ id: 'npm-version', command: 'npm', args: ['--version'], cwd: '.', timeoutSeconds: 5, required: true }], ci: [] },

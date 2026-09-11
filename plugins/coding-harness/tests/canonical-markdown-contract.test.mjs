@@ -58,6 +58,99 @@ test('the parser accepts every canonical workflow template and rejects Rule reor
   assert.ok(validateTemplateContract('templates/project/.codebuddy/rules/engineering.md', rule).some((error) => error.includes('headings')));
 });
 
+test('development contract main and typed block templates have strict allowlist contracts', async () => {
+  const templateRoot = join(plugin, 'templates');
+  const main = await readFile(join(templateRoot, 'workflow', 'development-contract.md'), 'utf8');
+  assert.deepEqual(validateTemplateContract('templates/workflow/development-contract.md', main), []);
+  for (const file of ['http-api.md', 'public-interface.md', 'data.md', 'cross-task-integration.md', 'shared-behavior.md']) {
+    const relativePath = `templates/contracts/${file}`;
+    const text = await readFile(join(templateRoot, 'contracts', file), 'utf8');
+    assert.deepEqual(validateTemplateContract(relativePath, text), [], file);
+    const changed = text.replace('| --- | ---', '| :--- | ---');
+    assert.ok(validateTemplateContract(relativePath, changed).some((error) => error.includes('separator')), `${file} must reject a changed table separator`);
+    const fixedFact = text.replace(/<[^>\r\n]+>/g, '固定业务事实');
+    assert.ok(validateTemplateContract(relativePath, fixedFact).some((error) => error.includes('template table data')), `${file} must reject fixed facts in data rows`);
+  }
+});
+
+test('completed development contract accepts applicable typed blocks and rejects malformed block tables', () => {
+  const valid = `# 共同开发契约
+
+## 契约范围
+- 适用需求：REQ-1。
+- 适用任务：T-1、T-2。
+- 明确排除：不修改既有认证协议。
+
+## 契约清单
+| 契约 ID | 类型 | 提供方 | 使用方 | 实现事实源 | 验证方式 |
+| --- | --- | --- | --- | --- | --- |
+| C-1 | HTTP API | T-1 | T-2 | src/api.ts | 集成测试 |
+
+## C-1 · HTTP API
+### 端点
+| 方法 | 路径 | 用途 | 提供任务 | 使用任务 |
+| --- | --- | --- | --- | --- |
+| GET | /summary | 返回汇总 | T-1 | T-2 |
+### 请求
+| 字段 | 类型 | 必填 | 约束 |
+| --- | --- | --- | --- |
+| range | string | 是 | 非空 |
+### 响应
+| 字段 | 类型 | 可空 | 语义 |
+| --- | --- | --- | --- |
+| total | integer | 否 | 汇总数量 |
+### 错误语义
+| HTTP 状态 | 错误码 | 触发条件 | 调用方行为 |
+| --- | --- | --- | --- |
+| 400 | INVALID_RANGE | 范围无效 | 展示输入错误 |
+### 兼容要求
+- 保持现有认证头。
+
+## 全任务共同门禁
+| 门禁 | 适用任务 | 通过条件 |
+| --- | --- | --- |
+| 集成测试 | T-1、T-2 | 全部通过 |
+`;
+  assert.deepEqual(validateCompletedDocument('docs/workflows/wf-20260910-a1b2c3/development-contract.md', valid), []);
+  const malformed = valid.replace('| 方法 | 路径 | 用途 | 提供任务 | 使用任务 |', '| 路径 | 方法 | 用途 | 提供任务 | 使用任务 |');
+  assert.ok(validateCompletedDocument('docs/workflows/wf-20260910-a1b2c3/development-contract.md', malformed).some((error) => error.includes('端点')));
+  const emptyScope = valid.replace('- 明确排除：不修改既有认证协议。', '- 明确排除：');
+  assert.ok(validateCompletedDocument('docs/workflows/wf-20260910-a1b2c3/development-contract.md', emptyScope).some((error) => error.includes('明确排除')));
+  const singleTaskBehavior = valid.replace('## C-1 · HTTP API', '## C-1 · 共享行为').replace('| C-1 | HTTP API |', '| C-1 | 共享行为 |').replace(/### 端点[\s\S]*?### 兼容要求\n- 保持现有认证头。/, '| 共同语义 | 适用任务 | 对应验收标准 | 验证方式 |\n| --- | --- | --- | --- |\n| 保持权限语义 | T-1 | REQ-1 | 自动化测试 |');
+  assert.ok(validateCompletedDocument('docs/workflows/wf-20260910-a1b2c3/development-contract.md', singleTaskBehavior).some((error) => error.includes('at least two')));
+});
+
+test('completed task package accepts repeated task sections that all read the common contract', () => {
+  const task = (id, title) => `## ${id} · ${title}
+- 任务目标：交付可独立验证的结果。
+- 负责契约：C-1。
+- 使用契约：C-2。
+- 可改范围：
+  - \`src/${id}.mjs\`
+- 必须读取：
+  - \`requirement.md\`
+  - \`design-decision.md\`
+  - \`development-contract.md\`
+  - \`.codebuddy/rules/engineering.md\`
+  - \`src/${id}.mjs\`
+- 验收标准：
+  1. 结果可以从公开行为观察；
+- 联调条件：共同契约提供方完成后联调。
+- 硬阻塞：无真实硬阻塞。\n`;
+  const text = `# 任务包
+
+## 共同开发契约
+- [共同开发契约](development-contract.md) 是所有任务必须读取的唯一契约正文。
+
+${task('T-1', '提供接口')}
+${task('T-2', '使用接口')}`;
+  assert.deepEqual(validateCompletedDocument('docs/workflows/wf-20260910-a1b2c3/task-package.md', text), []);
+  const missing = text.replace('  - `development-contract.md`\n', '');
+  assert.ok(validateCompletedDocument('docs/workflows/wf-20260910-a1b2c3/task-package.md', missing).some((error) => error.includes('development-contract.md')));
+  const emptyGoal = text.replace('- 任务目标：交付可独立验证的结果。', '- 任务目标：');
+  assert.ok(validateCompletedDocument('docs/workflows/wf-20260910-a1b2c3/task-package.md', emptyGoal).some((error) => error.includes('任务目标 must not be empty')));
+});
+
 test('workflow allowlist rejects a changed table header', async () => {
   const text = await readFile(join(plugin, 'templates/workflow', 'merge-report.md'), 'utf8');
   const changed = text.replace('| 需求/验收标准 | 关联任务 | 实现位置 | 验证证据 | 覆盖状态 |', '| 需求/验收标准 | 任务 | 实现位置 | 验证证据 | 覆盖状态 |');

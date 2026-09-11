@@ -1,5 +1,7 @@
 # V0.7 Distributed Initialization and Markdown Contract Implementation Plan
 
+> **状态：历史执行计划，已被 0.8.0 取代。** 本文件仅追溯 0.7.0 的初始化实现；其中的版本号、十份 workflow、步骤和示例字段均不得作为当前实现或验收依据。当前以 `2026-09-10-v08-shared-development-contract.md`、现行技术设计和 ADR 为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Release Coding Harness 0.7.0 with dependency-driven subagent initialization, real file-tree backfill, a single explicit Markdown contract, scoped Hooks, and synchronized design/user documentation.

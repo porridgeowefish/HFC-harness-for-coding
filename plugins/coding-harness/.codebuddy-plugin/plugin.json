@@ -1,6 +1,6 @@
 {
   "name": "coding-harness",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Canonical AI coding workflow with strict document, handoff, Rules and checklist contracts",
   "author": {
     "name": "AI Coding Harness Maintainers"

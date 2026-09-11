@@ -6,9 +6,6 @@
 ## 实现边界
 - <layer-or-component>：`<runtime-resolved-location>`
 
-## 共享契约
-- <shared-api-data-state-or-behavior-contract>。
-
 ## 需求覆盖
 | 需求项 | 实现策略 | 验证方式 |
 | --- | --- | --- |

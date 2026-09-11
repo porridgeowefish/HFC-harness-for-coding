@@ -6,6 +6,7 @@ import { lintTemplateText, missingTemplateContract } from '../runtime/template-l
 import { validateTemplateContract } from '../runtime/markdown-contract.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const RELEASE_VERSION = '0.8.0';
 
 async function walk(root) {
   const paths = []; const directories = [];
@@ -23,7 +24,7 @@ async function walk(root) {
 export const PACKAGE_DIRECTORIES = Object.freeze([
   '.codebuddy-plugin/', 'agents/', 'bin/', 'commands/', 'hooks/', 'runtime/', 'schemas/', 'scripts/', 'skills/',
   ...['harness-orchestrator', 'independent-review', 'knowledge-update-review', 'requirement-publication', 'solution-design', 'task-implementation'].map((name) => `skills/${name}/`),
-  'templates/', 'templates/business/', 'templates/engineering/', 'templates/project/', 'templates/project/.codebuddy/', 'templates/project/.codebuddy/rules/',
+  'templates/', 'templates/business/', 'templates/contracts/', 'templates/engineering/', 'templates/project/', 'templates/project/.codebuddy/', 'templates/project/.codebuddy/rules/',
   'templates/project/docs/', 'templates/project/docs/function/', 'templates/project/docs/knowledge/', 'templates/project/docs/knowledge/architecture/',
   'templates/project/docs/workflows/', 'templates/workflow/', 'tests/'
 ]);
@@ -76,6 +77,7 @@ export async function validatePackage(root = packageRoot) {
   const manifest = JSON.parse(await readFile(join(root, '.codebuddy-plugin', 'plugin.json'), 'utf8'));
   const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
   const manifestViolations = [];
+  if (manifest.version !== RELEASE_VERSION || pkg.version !== RELEASE_VERSION) manifestViolations.push(`release version must be ${RELEASE_VERSION}`);
   if (manifest.version !== pkg.version) manifestViolations.push(`plugin manifest version ${manifest.version} does not match package.json version ${pkg.version}`);
   if (manifest.agents !== './agents') manifestViolations.push('plugin manifest agents path is not "./agents"');
   if (manifest.hooks !== './hooks/hooks.json') manifestViolations.push('plugin manifest hooks path is not "./hooks/hooks.json"');

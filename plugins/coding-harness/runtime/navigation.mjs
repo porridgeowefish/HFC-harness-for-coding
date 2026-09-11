@@ -77,7 +77,7 @@ function generatedPurpose(path, entry, isDirectory = false) {
     if (isDirectory) return '单轮需求到合并的完整工作流产物目录';
     const workflowPurposes = {
       'source-materials.md': '本轮原始材料位置与使用说明', 'candidate-review.md': '候选需求与历史对齐评审', 'requirement.md': '本轮正式需求与业务验收标准',
-      'design-alignment.md': '需求到设计的范围、架构和决策记录', 'design-decision.md': '已确认的实现边界与共享契约', 'task-package.md': '可独立交付的开发任务及验收条件',
+      'design-alignment.md': '需求到设计的范围、架构和决策记录', 'design-decision.md': '已确认的实现边界、覆盖与取舍', 'development-contract.md': '所有开发任务共同读取的可执行契约', 'task-package.md': '可独立交付的开发任务及验收条件',
       'development-summary.md': '实现、测试与门禁结果摘要', 'knowledge-update-review.md': '长期知识与 Rules 更新审核记录', 'merge-report.md': '需求覆盖、评审与合并结论'
     };
     return workflowPurposes[entry] ?? '工作流任务导航记录';

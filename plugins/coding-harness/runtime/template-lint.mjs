@@ -19,8 +19,9 @@ export const TEMPLATE_REQUIREMENTS = Object.freeze({
   'candidate-review.md': ['整理时间', '整理范围', '| 候选项 | 关联功能 | 判断 | 依据 |', 'AI 扩写', '审核意见'],
   'requirement.md': ['标题：<task-title>', '发布人：<publisher>', '发布时间：<timestamp>', '类型：<用户故事/业务规则/质量或技术约束>'],
   'design-alignment.md': ['验收标准对应', '读取的工程入口', '预计修改', '必须保持', 'UML', '需要确认'],
-  'design-decision.md': ['已确认范围', '实现边界', '共享契约', '需求覆盖', '已确认取舍'],
-  'task-package.md': ['共享契约', '必须读取', '可改范围', '验收标准', '联调条件', '硬阻塞'],
+  'design-decision.md': ['已确认范围', '实现边界', '需求覆盖', '已确认取舍'],
+  'development-contract.md': ['契约范围', '契约清单', '实现事实源', '全任务共同门禁'],
+  'task-package.md': ['共同开发契约', '负责契约', '使用契约', '必须读取', '可改范围', '验收标准', '联调条件', '硬阻塞'],
   'development-summary.md': ['本轮完成情况', '测试先行记录', 'Diff 概览', '门禁结果', '提交 MR 前请人复核'],
   'knowledge-update-review.md': ['MR / Commit', '需求与设计依据', '代码与验证依据', '审核状态', '长期资产 | 判定 | 理由 | 本轮动作 | 证据', '审核人', '实施状态', '最终独立评审 Commit'],
   'merge-report.md': ['分支：<source-branch>', '任务 ID：<workflow-id>', '影响范围', '不涉及', 'BLOCKER', 'WARNING', 'INFO', '合并结论']

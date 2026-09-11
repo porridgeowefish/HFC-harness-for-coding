@@ -1,6 +1,6 @@
 # ADR · AI 赋能开发全流程冷启动体系
 
-> **现行一致性口径（2026-09-09）**：生成项目的目录、Rules、十份 workflow 产物、`state.json` 字段、模板字段契约和知识审核枚举，均以《技术设计-流程模块与交接协议》为唯一规范。本 ADR 中与其不一致的历史方案、路径、规则文件名、阶段名、字段或版本号全部失效；ADR 仅保留不冲突的决策理由、权限隔离、原子写入、证据与门禁原则。当前插件与适配器版本为 `0.7.0`。
+> **现行一致性口径（2026-09-10）**：生成项目的目录、Rules、十一份 workflow 产物、`state.json` 字段、模板字段契约和知识审核枚举，均以《技术设计-流程模块与交接协议》为唯一规范。本 ADR 中与其不一致的历史方案、路径、规则文件名、阶段名、字段或版本号全部失效；ADR 仅保留不冲突的决策理由、权限隔离、原子写入、证据与门禁原则。当前插件与适配器版本为 `0.8.0`。
 
 > 本文档记录"做哪些机制"与"为什么这样取舍"的决策过程，逐阶段推进。  
 > 每条决策按四段结构展开：开发流程 / 机制确认 / 具体实现手段 / 取舍。
@@ -165,6 +165,7 @@ AI 和初始化器不得把上述路径加入 `.gitignore`、`.git/info/exclude`
 │           ├── requirement.md      # 审核发布后的正式需求单
 │           ├── design-alignment.md
 │           ├── design-decision.md
+│           ├── development-contract.md
 │           ├── task-package.md
 │           ├── development-summary.md
 │           ├── knowledge-update-review.md # 长期知识与 Rules 的独立审核交付物
@@ -203,6 +204,7 @@ AI 和初始化器不得把上述路径加入 `.gitignore`、`.git/info/exclude`
 | --- | --- |
 | 设计对齐稿 | `docs/workflows/<task-id>/design-alignment.md` |
 | 设计结论 | `docs/workflows/<task-id>/design-decision.md` |
+| 共同开发契约 | `docs/workflows/<task-id>/development-contract.md` |
 | 任务包 | `docs/workflows/<task-id>/task-package.md` |
 | 正式需求单 | `docs/workflows/<task-id>/requirement.md` |
 | 版本摘要与验收结果 | `docs/workflows/<task-id>/development-summary.md` |
@@ -454,20 +456,22 @@ docs/function/                    # 功能知识库：业务模块 → 功能点
 
 人不需要审核或逐项确认 AI 已通过代码核验的工程事实；人只显式确认会影响业务目标、兼容性、成本、交付风险或不可逆操作的待决策项，并可修正改动范围和 AI 的理解偏差。AI 根据确认意见返工，直到没有未决决策。
 
-#### 机制六：对齐完成后，只输出设计结论与任务包
+#### 机制六：对齐完成后，依次输出设计结论、共同开发契约与任务包
 
-设计对齐稿中的讨论完成后，AI 输出两份面向执行的产物（落盘路径见 0.4 节）：
+设计对齐稿中的讨论完成后，AI 输出三份面向执行的产物（落盘路径见 0.4 节）：
 
 | 产物 | 只保留什么 | 不保留什么 |
 | --- | --- | --- |
-| 设计结论（`design-decision.md`） | 已确认的改动范围、边界、最终 UML、关键取舍，以及需求验收标准的实现覆盖 | 备选方案、讨论过程和已否决内容 |
-| 任务包（`task-package.md`） | 后续开发、测试与集成可直接执行的任务 | 任务拆分前的探索过程 |
+| 设计结论（`design-decision.md`） | 已确认的改动范围、边界、最终 UML、关键取舍，以及需求验收标准的实现覆盖 | 备选方案、讨论过程、已否决内容和契约正文 |
+| 共同开发契约（`development-contract.md`） | 全部开发任务共同读取的 API、公共接口、数据、跨任务集成和必要共享行为 | 设计理由、普通验收行为和不适用的契约块 |
+| 任务包（`task-package.md`） | 后续开发、测试与集成可直接执行的任务及其契约 ID 引用 | 任务拆分前的探索过程和契约正文 |
 
-任务包采用“共享契约先定、独立责任并行、集成验证收口”的模型，不用传统`前置任务 / 后置任务`字段制造无效等待。每个任务固定说明：
+任务包采用“共同开发契约先定、独立责任并行、集成验证收口”的模型，不用传统`前置任务 / 后置任务`字段制造无效等待。每个任务固定说明：
 
 ```text
 任务目标：要独立交付的工程结果
-共享契约：必须共同遵守的接口、数据、状态或行为约定
+负责契约：本任务负责实现的共同开发契约 ID
+使用契约：本任务依赖的共同开发契约 ID
 可改范围：允许修改的目录、文件或模块边界
 验收标准：完成后必须可观察、可验证的结果
 联调条件：何时、以什么输入输出与其他任务集成
@@ -476,7 +480,7 @@ docs/function/                    # 功能知识库：业务模块 → 功能点
 
 验收标准必须从正式需求单的业务级验收标准拆解而来，并落到任务可直接验证的表达；不得只写“完成开发”“自测通过”等不可证伪表述。任务的粒度定义为：**一个 AI 或开发者能在一轮聚焦上下文中完成、验证并交付的最小工程责任。**不以固定时长、固定文件数或“前端/后端/测试”工种划分为硬标准。一个合格任务必须同时满足：单一结果、上下文可控、可改范围明确、共享契约已定、验收可独立进行，并且拆开后存在真实并行价值。若任务上下文明显膨胀、验收无法独立、或与其他任务频繁争抢相同核心文件和契约，才继续拆分。
 
-共享契约不另设复杂编号或独立管理机制，直接简短写在`task-package.md`开头，说明所有并行任务必须共同遵守的接口、数据、状态或行为约定。契约已明确、可用 Mock/Stub 替代真实实现的，不构成等待；各任务可直接并行。硬阻塞只记录真正无法隔离的前提，例如未决业务裁定、唯一共享核心资产无法并行修改、外部测试环境未就绪、不可替代的前序产出或安全合规审批；其余默认写“无”。
+共同开发契约独立落在 `development-contract.md`，作为所有开发任务共同读取的唯一契约正文。它按需装配 HTTP API、公共接口、数据、跨任务集成和共享行为五类块；普通状态、权限和行为结果属于验收标准，只有多个任务必须共享的状态、权限、事务或并发语义才提升为共享行为契约。`task-package.md` 只引用契约 ID，不复制正文。契约已明确、可用 Mock/Stub 替代真实实现的，不构成等待；各任务可直接并行。硬阻塞只记录真正无法隔离的前提。
 
 #### 机制七：人确认任务包可开工，设计阶段才结束
 
@@ -740,7 +744,7 @@ MR 审核通过并合并
 ```text
 docs/workflows/<task-id>/            # 人读：本轮 Markdown 产物
 └── README.md、requirement.md、design-alignment.md、
-    design-decision.md、task-package.md、
+    design-decision.md、development-contract.md、task-package.md、
     development-summary.md、knowledge-update-review.md、merge-report.md
 
 .codebuddy/workflows/<task-id>/      # 机器跑：默认 gitignore
@@ -842,7 +846,7 @@ CodeBuddy PreToolUse Hook
 
 ### 8.2 第一版确定性实现契约
 
-`.codebuddy/harness.json` 固定使用 `schemaVersion: "1.0"` 和 `adapterVersion: "0.7.0"`。顶层包含 `protectedContracts` 与 `gates`；`gates` 下定义 `preCommit` 和 `ci` 两个检查数组。每个检查包含 `id`、`command`、`args`、`cwd`、`timeoutSeconds` 和 `required`。命令与参数分离并以 `shell:false` 执行，`cwd` 不得逃逸项目根目录。
+`.codebuddy/harness.json` 固定使用 `schemaVersion: "1.0"` 和 `adapterVersion: "0.8.0"`。顶层包含 `protectedContracts` 与 `gates`；`gates` 下定义 `preCommit` 和 `ci` 两个检查数组。每个检查包含 `id`、`command`、`args`、`cwd`、`timeoutSeconds` 和 `required`。命令与参数分离并以 `shell:false` 执行，`cwd` 不得逃逸项目根目录。
 
 检查按配置顺序串行执行。默认超时 300 秒；初始化器识别出的 lint/build 默认 600 秒，测试默认 900 秒。`required:true` 的检查失败、超时、命令不存在或配置无效时立即失败关闭；非必需检查保留结果但不阻断。第一版不做并行执行和风险分档，以结果顺序稳定、错误定位明确为优先。
 
@@ -1027,3 +1031,17 @@ CODEBUDDY.md                      # 常驻层，≤200 行，Git 跟踪
 ### 结果
 
 0.7.0 的安装包、运行时、模板、Skill、技术设计和本 ADR 均以该合同为准。项目初始化完成时，除按需创建的 workflow 外，所有规范长期资产必须已写入真实内容；管理员只需通过顶层 Skill 的自然语言 checklist 确认并提交 Git，其他成员拉取同一提交即可。
+
+## 0.8.0 决策增补：共同开发契约成为一等交接产物
+
+### 决策
+
+1. 在 `design-decision.md` 与 `task-package.md` 之间新增 `development-contract.md`；每个 workflow 固定为 README 加十份正文，共十一份文件。
+2. `development-contract.md` 是所有开发任务共同读取的唯一契约正文。`design-decision.md` 只保存范围、边界、覆盖与取舍，`task-package.md` 只保存任务分解和契约 ID 引用，两者不得复制契约正文。
+3. 契约按需装配 HTTP API、公共接口、数据、跨任务集成和共享行为五类模板。不适用的块不生成。普通状态、权限和行为结果写入验收标准；只有多个任务必须共同遵守的状态、权限、事务或并发语义才进入共享行为契约。
+4. 设计阶段批准和进入开发的门禁都要求共同开发契约完成且结构合法；每个开发任务必须读取整份契约，并声明真实存在的负责与使用契约 ID。`design-decision.md`、`development-contract.md`、`task-package.md` 必须已提交且工作区干净，确认记录绑定该 Git 版本；确认后任一文件变化，或实现需要改变契约时，必须退回设计并重新确认任务包。不引入 Git 之外的内容摘要或版本机制。
+5. 主模板、五类片段模板、技术设计和运行时使用同一组标题、表头与占位符 allowlist。版本历史继续只使用 Git，不增加 digest、内容哈希、CAS 或额外初始化锁。
+
+### 结果
+
+0.8.0 的安装包、运行时、模板、Skill、技术设计、HTML 和本 ADR 统一采用上述十一份 workflow 结构；0.7.0 中“共享契约直接写在任务包开头”的规则失效。

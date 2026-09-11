@@ -1,6 +1,6 @@
 export const WORKFLOW_ARTIFACTS = Object.freeze([
   'README.md', 'source-materials.md', 'candidate-review.md', 'requirement.md',
-  'design-alignment.md', 'design-decision.md', 'task-package.md',
+  'design-alignment.md', 'design-decision.md', 'development-contract.md', 'task-package.md',
   'development-summary.md', 'knowledge-update-review.md', 'merge-report.md'
 ]);
 

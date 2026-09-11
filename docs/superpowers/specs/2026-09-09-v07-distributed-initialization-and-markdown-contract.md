@@ -2,7 +2,9 @@
 
 ## 状态
 
-已由项目负责人确认并在 0.7.0 实施。本文替代第六版中“单一宿主 Agent 读完全仓并提交单份知识草案”的初始化编排方式；目录根、十份 workflow 文件、Git 协作和不使用 digest/hash/CAS 的决定保持不变。
+**历史版本，已被 0.8.0 取代。** 本文只用于追溯 0.7.0 的初始化设计；凡涉及 workflow 文件集合、设计到开发交接或共同契约的内容，均以 `2026-09-10-v08-shared-development-contract.md`、`ADR-latest.md` 和现行技术设计为准，不再构成当前插件合同。
+
+本文曾由项目负责人确认并在 0.7.0 实施。当时它替代第六版中“单一宿主 Agent 读完全仓并提交单份知识草案”的初始化编排方式；其中 Git 协作和不使用 digest/hash/CAS 的决定仍被后续版本继承。
 
 ## 目标
 
@@ -202,7 +204,7 @@ Rules 是“执行约束 + 知识索引”。`相关知识入口` 必须使用�
 
 ### Workflow
 
-workflow 仍严格保留十个文件：任务 README 加 `source-materials.md`、`candidate-review.md`、`requirement.md`、`design-alignment.md`、`design-decision.md`、`task-package.md`、`development-summary.md`、`knowledge-update-review.md`、`merge-report.md`。九份正文沿用《技术设计-流程模块与交接协议》第 4–7 节的标题、字段和表头，不能由本版本另起格式。
+> 历史口径（已失效）：0.7.0 当时使用十个 workflow 文件。0.8.0 已在 `design-decision.md` 与 `task-package.md` 之间加入 `development-contract.md`，当前必须使用十一文件集合；本段不得作为实现或验收依据。
 
 ## 模板与运行时数据合同
 

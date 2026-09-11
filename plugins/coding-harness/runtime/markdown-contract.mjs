@@ -101,6 +101,36 @@ const CONTRACTS = Object.freeze({
     headings: ['工作流索引'],
     tables: [['任务', '阶段', '状态', '创建时间']],
     placeholders: ['<workflow-title>', '<workflow-stage>', '<workflow-status>', '<workflow-created-at>']
+  },
+  'templates/contracts/http-api.md': {
+    headings: ['<contract-id> · HTTP API', '端点', '请求', '响应', '错误语义', '兼容要求'],
+    tables: [['方法', '路径', '用途', '提供任务', '使用任务'], ['字段', '类型', '必填', '约束'], ['字段', '类型', '可空', '语义'], ['HTTP 状态', '错误码', '触发条件', '调用方行为']],
+    placeholders: ['<contract-id>', '<http-method>', '<api-path>', '<endpoint-purpose>', '<provider-task-id>', '<consumer-task-id-list>', '<request-field>', '<field-type>', '<是/否>', '<value-constraint>', '<response-field>', '<field-semantics>', '<http-status>', '<error-code>', '<trigger-condition>', '<consumer-behavior>', '<compatibility-requirement>'],
+    strictBody: true
+  },
+  'templates/contracts/public-interface.md': {
+    headings: ['<contract-id> · 公共接口', '接口定义', '参数', '返回或输出', '异常或退出码'],
+    tables: [['接口或命令', '签名或用法', '提供任务', '使用任务'], ['参数', '类型', '必填', '约束'], ['内容', '类型', '语义'], ['触发条件', '异常或退出码', '调用方行为']],
+    placeholders: ['<contract-id>', '<interface-or-command>', '<signature-or-usage>', '<provider-task-id>', '<consumer-task-id-list>', '<parameter-name>', '<parameter-type>', '<是/否>', '<parameter-constraint>', '<output-name>', '<output-type>', '<output-semantics>', '<trigger-condition>', '<exception-or-exit-code>', '<consumer-behavior>'],
+    strictBody: true
+  },
+  'templates/contracts/data.md': {
+    headings: ['<contract-id> · 数据', '数据结构', '字段', '一致性与兼容'],
+    tables: [['结构', '用途', '生产方', '消费方'], ['字段', '类型', '结构或取值', '必填/可空', '约束', '本轮变化']],
+    placeholders: ['<contract-id>', '<structure-name>', '<structure-purpose>', '<provider-task-or-component>', '<consumer-task-or-component>', '<field-name>', '<field-type>', '<shape-or-enum-values>', '<required-or-nullable>', '<field-constraint>', '<新增/修改/复用/废弃>', '<uniqueness-rule>', '<default-value-rule>', '<compatibility-rule>', '<migration-or-consumer-update>'],
+    strictBody: true
+  },
+  'templates/contracts/cross-task-integration.md': {
+    headings: ['<contract-id> · 跨任务集成', '任务接口', 'Mock / Stub', '联调时机'],
+    tables: [['提供任务', '使用任务', '输入', '输出', '错误语义'], ['使用任务', '替代对象', '模拟内容', '必须保持一致', '结束条件'], ['参与任务', '准入条件', '联调动作', '通过条件']],
+    placeholders: ['<contract-id>', '<provider-task-id>', '<consumer-task-id>', '<integration-input>', '<integration-output>', '<integration-error-semantics>', '<substituted-component>', '<mock-or-stub-behavior>', '<contract-id-or-schema>', '<switch-to-real-integration-condition>', '<task-id-list>', '<integration-entry-condition>', '<integration-action>', '<observable-pass-condition>'],
+    strictBody: true
+  },
+  'templates/contracts/shared-behavior.md': {
+    headings: ['<contract-id> · 共享行为'],
+    tables: [['共同语义', '适用任务', '对应验收标准', '验证方式']],
+    placeholders: ['<contract-id>', '<shared-state-permission-transaction-or-concurrency-semantics>', '<task-id-list>', '<requirement-or-criterion-id>', '<verification-method>'],
+    strictBody: true
   }
 });
 
@@ -109,13 +139,14 @@ const WORKFLOW_HEADINGS = Object.freeze({
   'README.md': ['Workflow 记录', '产物导航'],
   'candidate-review.md': ['候选需求评审稿', '基本信息', '历史对齐', '候选需求', '<candidate-id> · <candidate-title>'],
   'design-alignment.md': ['设计对齐稿', '1. 需求理解', '2. 改动范围', '3. 架构变化', '4. 待人确认的决策', '<decision-id> · <decision-title>', '5. 风险与不确定项'],
-  'design-decision.md': ['设计结论', '已确认范围', '实现边界', '共享契约', '需求覆盖', '已确认取舍'],
+  'design-decision.md': ['设计结论', '已确认范围', '实现边界', '需求覆盖', '已确认取舍'],
+  'development-contract.md': ['共同开发契约', '契约范围', '契约清单', '全任务共同门禁'],
   'development-summary.md': ['开发摘要', '本轮完成情况', '测试先行记录', 'Diff 概览', '门禁结果', '未完成项与阻断', '提交 MR 前请人复核'],
   'knowledge-update-review.md': ['长期知识更新审核单', '1. 审核对象', '2. 影响判定总览', '3. 更新草案', '<update-id> · <update-title>', '4. 审核结论', '5. 实施记录'],
   'merge-report.md': ['代码合并报告', '1. 基本信息', '2. 本次变更', '3. 需求实现与验证', '4. 测试与质量门禁', '5. 独立代码评审', '6. 安全扫描', '7. 遗留问题与风险', '8. 合并结论'],
   'requirement.md': ['正式需求单', '基本信息', '需求项', '<requirement-id> · <requirement-title>'],
   'source-materials.md': ['原始材料索引'],
-  'task-package.md': ['任务包', '共享契约', '<task-id> · <task-title>']
+  'task-package.md': ['任务包', '共同开发契约', '<task-id> · <task-title>']
 });
 
 // Workflow tables are part of the public handoff contract too.  Keeping the
@@ -126,6 +157,7 @@ const WORKFLOW_TABLES = Object.freeze({
   'candidate-review.md': [['候选项', '关联功能', '判断', '依据']],
   'design-alignment.md': [['需求验收标准', '设计响应']],
   'design-decision.md': [['需求项', '实现策略', '验证方式']],
+  'development-contract.md': [['契约 ID', '类型', '提供方', '使用方', '实现事实源', '验证方式'], ['门禁', '适用任务', '通过条件']],
   'development-summary.md': [
     ['任务', '状态', '实现位置', '验收结果'],
     ['任务', '先新增/更新的测试', '初始状态', '最终状态', '验证证据'],
@@ -141,24 +173,27 @@ const WORKFLOW_TABLES = Object.freeze({
 });
 
 const WORKFLOW_REQUIRED_LINKS = Object.freeze({
-  'README.md': ['source-materials.md', 'candidate-review.md', 'requirement.md', 'design-alignment.md', 'design-decision.md', 'task-package.md', 'development-summary.md', 'knowledge-update-review.md', 'merge-report.md']
+  'README.md': ['source-materials.md', 'candidate-review.md', 'requirement.md', 'design-alignment.md', 'design-decision.md', 'development-contract.md', 'task-package.md', 'development-summary.md', 'knowledge-update-review.md', 'merge-report.md'],
+  'task-package.md': ['development-contract.md']
 });
 
 const WORKFLOW_STATIC_LINES = Object.freeze({
-  'knowledge-update-review.md': ['- 说明：知识更新产生新 Commit 后，必须重新执行独立评审；未通过前不得生成最终合并报告。']
+  'knowledge-update-review.md': ['- 说明：知识更新产生新 Commit 后，必须重新执行独立评审；未通过前不得生成最终合并报告。'],
+  'task-package.md': ['- [共同开发契约](development-contract.md) 是所有任务必须读取的唯一契约正文。']
 });
 
 const WORKFLOW_PLACEHOLDERS_BY_FILE = Object.freeze({
   'README.md': ['workflow-id', 'task-title', 'current-or-final-status'],
   'candidate-review.md': ['workflow-id', 'timestamp', 'in-scope-business-area', 'candidate-id', 'related-function', '可能已存在/可能冲突/可能复用/无可用历史', 'fact-based-rationale', 'candidate-title', '用户故事/业务规则/质量或技术约束', 'candidate-statement', 'observable-acceptance-criterion', '是/否', 'historical-alignment-result-or-none', '待审核/通过/需修改/合并/拆分/驳回/暂缓', 'human-review-comment'],
   'design-alignment.md': ['intended-change', 'explicitly-out-of-scope-items', 'requirement-criterion', 'design-response', 'business-module / function', 'runtime-resolved-code-or-config-location', 'component-or-module', 'expected-change', 'existing-contract-or-boundary', 'architecture-impact-or-not-applicable', 'updated-diagram-reference-or-not-applicable', 'decision-id', 'decision-title', 'recommended-option', 'alternative-options-or-none', 'business-technical-cost-or-compatibility-impact', 'decision-question', 'pending/confirmed/rejected', 'risk-id', 'unknown-fact-or-risk-and-verification-plan'],
-  'design-decision.md': ['approved-change-scope', 'layer-or-component', 'runtime-resolved-location', 'shared-api-data-state-or-behavior-contract', 'requirement-or-criterion-id', 'implementation-strategy', 'verification-method', 'confirmed-trade-off-and-rationale'],
+  'design-decision.md': ['approved-change-scope', 'layer-or-component', 'runtime-resolved-location', 'requirement-or-criterion-id', 'implementation-strategy', 'verification-method', 'confirmed-trade-off-and-rationale'],
+  'development-contract.md': ['requirement-or-criterion-id-list', 'task-id-list', 'explicitly-excluded-contract-scope', 'contract-id', 'API/公共接口/数据/共享行为/跨任务集成', 'provider-task-or-component', 'consumer-task-or-component', 'runtime-resolved-source-location', 'verification-method', 'applicable-contract-blocks', 'runtime-discovered-gate-name', 'observable-pass-condition'],
   'development-summary.md': ['task-id', 'completed/partial/blocked', 'runtime-resolved-implementation-location', 'criterion-coverage-and-result-summary', 'runtime-resolved-test-location-or-identifier', 'initial-observation', 'final-observation', 'runtime-generated-id', 'what-the-evidence-proves', 'change-kind', 'runtime-resolved-location', 'change-purpose', 'runtime-discovered-gate-name', 'actual-command-or-platform-action', 'passed/failed/not_configured/not_run', 'none-or-unresolved-item-with-impact-and-next-action', 'whether-each-business-acceptance-criterion-has-implementation-and-verification', 'whether-any-not-configured-or-failed-gate-is-acceptable', 'whether-diff-stays-within-approved-scope'],
   'knowledge-update-review.md': ['workflow-id', 'mr-identifier', 'reviewed-commit', 'runtime-generated-id', 'evidence-purpose', 'pending/approved/returned/rejected', 'required-long-term-asset', '需要更新/无需更新/待人裁定', 'fact-based-rationale', 'update/no-change/human-decision', 'runtime-generated-id', 'what-the-evidence-proves', 'update-id', 'update-title', 'approved-long-term-asset-path', 'proposed-current-fact-or-rule-change', 'superseded-content-or-none', 'why-this-knowledge-must-remain-long-lived', 'reviewer', 'timestamp', '通过/退回修改/不通过', 'review-comment', 'approved-update-id-array', '待实施/已实施/实施失败', 'runtime-resolved-changed-location-array', 'knowledge-update-commit', 'final-reviewed-commit'],
   'merge-report.md': ['mr-identifier', 'source-branch', 'final-reviewed-commit', 'workflow-id', 'timestamp', 'approved-change-goal', 'actual-changed-components-or-areas', 'explicitly-out-of-scope-items', 'requirement-or-criterion-id-and-summary', 'task-id', 'runtime-resolved-location', 'runtime-generated-id', 'what-the-evidence-proves', 'covered/partially-covered/not-covered/not-applicable', 'runtime-discovered-gate-name', 'passed/failed/not_configured/not_run', 'runtime-generated-count', 'runtime-generated-count-and-status', 'scan-scope-findings-and-any-exemption', 'none-or-unresolved-item-with-impact-and-recommendation', '可以合并/不建议合并/需要人工判断', 'remaining-platform-or-approval-condition'],
   'requirement.md': ['workflow-id', 'task-title', 'published-status', 'publisher', 'timestamp', 'requirement-id', 'requirement-title', '用户故事/业务规则/质量或技术约束', 'approved-requirement-statement', 'observable-acceptance-criterion'],
   'source-materials.md': ['workflow-id', 'timestamp', 'source-id', 'source-type', 'runtime-resolved-location', 'provider', 'why-this-source-is-read'],
-  'task-package.md': ['all-task-shared-api-data-state-or-behavior-contract', 'integration-and-gate-requirement', 'task-id', 'task-title', 'independently-deliverable-engineering-result', 'runtime-resolved-file-or-module-boundary', 'matched-rule-path', 'necessary-code-or-knowledge-location', 'observable-task-acceptance-criterion', 'integration-input-output-and-timing-or-none', 'blocking-prerequisite-or-none']
+  'task-package.md': ['task-id', 'task-title', 'independently-deliverable-engineering-result', 'provided-contract-id-list', 'consumed-contract-id-list', 'runtime-resolved-file-or-module-boundary', 'matched-rule-path', 'necessary-code-or-knowledge-location', 'observable-task-acceptance-criterion', 'integration-input-output-and-timing-or-none', 'blocking-prerequisite-or-none']
 });
 
 const STATIC_HEADING_LEVELS = Object.freeze({
@@ -174,14 +209,20 @@ const STATIC_HEADING_LEVELS = Object.freeze({
   'templates/project/.codebuddy/rules/testing.md': [1, 2, 2, 2, 2],
   'templates/project/.codebuddy/rules/api-and-data.md': [1, 2, 2, 2, 2],
   'templates/project/.codebuddy/rules/commit-and-mr.md': [1, 2, 2, 2, 2],
-  'templates/project/docs/workflows/README.md': [1]
+  'templates/project/docs/workflows/README.md': [1],
+  'templates/contracts/http-api.md': [2, 3, 3, 3, 3, 3],
+  'templates/contracts/public-interface.md': [2, 3, 3, 3, 3],
+  'templates/contracts/data.md': [2, 3, 3, 3],
+  'templates/contracts/cross-task-integration.md': [2, 3, 3, 3],
+  'templates/contracts/shared-behavior.md': [2]
 });
 
 const WORKFLOW_HEADING_LEVELS = Object.freeze({
   'README.md': [1, 2],
   'candidate-review.md': [1, 2, 2, 2, 3],
   'design-alignment.md': [1, 2, 2, 2, 2, 3, 2],
-  'design-decision.md': [1, 2, 2, 2, 2, 2],
+  'design-decision.md': [1, 2, 2, 2, 2],
+  'development-contract.md': [1, 2, 2, 2],
   'development-summary.md': [1, 2, 2, 2, 2, 2, 2],
   'knowledge-update-review.md': [1, 2, 2, 2, 3, 2, 2],
   'merge-report.md': [1, 2, 2, 2, 2, 2, 2, 2, 2],
@@ -313,6 +354,7 @@ export function validateTemplateContract(relativePath, text) {
     const declared = extractPlaceholdersFromText(cell).some((token) => allowedPlaceholders(relativePath).has(token));
     if (DYNAMIC_FACT_MARKERS.test(cell) && !declared) errors.push('dynamic fact in a Markdown table must use a declared placeholder');
     if (contract.workflow && !declared) errors.push('workflow table data must use a declared placeholder');
+    else if (contract.strictBody && !declared) errors.push('template table data must use a declared placeholder');
   }
   return [...new Set(errors)];
 }
@@ -339,6 +381,174 @@ export function validateStructureContract(relativePath, text, { allowDynamicHead
     validateTables(errors, structure, contract.tables);
     for (const link of contract.requiredLinks ?? []) if (!new RegExp(`\\]\\(${link.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}(?:\\)|#)`).test(String(text))) errors.push(`required workflow navigation link is missing: ${link}`);
   }
+  return [...new Set(errors)];
+}
+
+const DEVELOPMENT_BLOCKS = Object.freeze({
+  'HTTP API': {
+    headings: ['端点', '请求', '响应', '错误语义', '兼容要求'],
+    tables: [['方法', '路径', '用途', '提供任务', '使用任务'], ['字段', '类型', '必填', '约束'], ['字段', '类型', '可空', '语义'], ['HTTP 状态', '错误码', '触发条件', '调用方行为']]
+  },
+  '公共接口': {
+    headings: ['接口定义', '参数', '返回或输出', '异常或退出码'],
+    tables: [['接口或命令', '签名或用法', '提供任务', '使用任务'], ['参数', '类型', '必填', '约束'], ['内容', '类型', '语义'], ['触发条件', '异常或退出码', '调用方行为']]
+  },
+  '数据': {
+    headings: ['数据结构', '字段', '一致性与兼容'],
+    tables: [['结构', '用途', '生产方', '消费方'], ['字段', '类型', '结构或取值', '必填/可空', '约束', '本轮变化']]
+  },
+  '跨任务集成': {
+    headings: ['任务接口', 'Mock / Stub', '联调时机'],
+    tables: [['提供任务', '使用任务', '输入', '输出', '错误语义'], ['使用任务', '替代对象', '模拟内容', '必须保持一致', '结束条件'], ['参与任务', '准入条件', '联调动作', '通过条件']]
+  },
+  '共享行为': {
+    headings: [],
+    tables: [['共同语义', '适用任务', '对应验收标准', '验证方式']]
+  }
+});
+
+function validateExactTable(errors, table, header, label) {
+  if (!table) { errors.push(`${label} table is missing`); return; }
+  if (JSON.stringify(table.header) !== JSON.stringify(header)) errors.push(`${label} table header must exactly match: ${header.join(' | ')}`);
+  if (table.separator.length !== header.length || table.separator.some((cell) => cell !== '---')) errors.push(`${label} table separator must contain exactly ${header.length} cells of ---`);
+  if (!table.rows.length || table.rows.some((row) => row.length !== header.length || row.some((cell) => !cell.trim()))) errors.push(`${label} table requires at least one complete data row`);
+}
+
+function validateCompletedDevelopmentContract(structure, text) {
+  const errors = [];
+  const headings = structure.headings;
+  if (headings[0]?.level !== 1 || headings[0]?.text !== '共同开发契约') errors.push('development contract title must be 共同开发契约');
+  const scope = headings.find((item) => item.level === 2 && item.text === '契约范围');
+  const list = headings.find((item) => item.level === 2 && item.text === '契约清单');
+  const gates = headings.find((item) => item.level === 2 && item.text === '全任务共同门禁');
+  if (!scope || !list || !gates || !(scope.line < list.line && list.line < gates.line)) errors.push('development contract must order 契约范围, 契约清单 and 全任务共同门禁');
+  if (headings.some((item) => item.level !== 1 && item.level !== 2 && item.level !== 3)) errors.push('development contract allows only H1, H2 and H3 headings');
+
+  const tablesIn = (start, end) => structure.tables.filter((table) => table.line > start && table.line < end);
+  const lines = String(text).replaceAll('\r\n', '\n').split('\n');
+  const scopeEnd = list?.line ?? Number.MAX_SAFE_INTEGER;
+  const scopeBody = scope ? lines.slice(scope.line, scopeEnd - 1).join('\n') : '';
+  for (const field of ['适用需求', '适用任务', '明确排除']) {
+    if (!new RegExp(`^\\s*[-*]\\s+${field}[：:]\\s*\\S+`, 'm').test(scopeBody)) errors.push(`契约范围 ${field} must not be empty`);
+  }
+  const baseTables = list && gates ? tablesIn(list.line, headings.find((item) => item.level === 2 && item.line > list.line)?.line ?? gates.line) : [];
+  validateExactTable(errors, baseTables[0], ['契约 ID', '类型', '提供方', '使用方', '实现事实源', '验证方式'], '契约清单');
+  if (baseTables.length > 1) errors.push('契约清单 must contain exactly one table');
+
+  const gateTables = gates ? tablesIn(gates.line, Number.MAX_SAFE_INTEGER) : [];
+  validateExactTable(errors, gateTables[0], ['门禁', '适用任务', '通过条件'], '全任务共同门禁');
+  if (gateTables.length > 1) errors.push('全任务共同门禁 must contain exactly one table');
+
+  const blocks = headings.filter((item) => item.level === 2 && list && gates && item.line > list.line && item.line < gates.line);
+  if (!blocks.length) errors.push('development contract requires at least one applicable contract block');
+  const actualContracts = [];
+  for (const [index, block] of blocks.entries()) {
+    const match = block.text.match(/^(.+?) · (HTTP API|公共接口|数据|跨任务集成|共享行为)$/);
+    if (!match) { errors.push(`invalid development contract block heading: ${block.text}`); continue; }
+    const [, id, type] = match;
+    actualContracts.push([id.trim(), type]);
+    const end = blocks[index + 1]?.line ?? gates.line;
+    const children = headings.filter((item) => item.level === 3 && item.line > block.line && item.line < end);
+    const spec = DEVELOPMENT_BLOCKS[type];
+    if (JSON.stringify(children.map((item) => item.text)) !== JSON.stringify(spec.headings)) errors.push(`${type} headings must exactly match: ${spec.headings.join(' | ')}`);
+    const blockTables = tablesIn(block.line, end);
+    if (blockTables.length !== spec.tables.length) errors.push(`${type} must contain exactly ${spec.tables.length} tables`);
+    for (let tableIndex = 0; tableIndex < spec.tables.length; tableIndex += 1) validateExactTable(errors, blockTables[tableIndex], spec.tables[tableIndex], `${type} ${spec.headings[tableIndex] ?? '契约'}`);
+    if (type === 'HTTP API') {
+      const compatibility = children.find((item) => item.text === '兼容要求');
+      const compatibilityIndex = headings.indexOf(compatibility);
+      if (!compatibility || !sectionHasContent(structure, compatibilityIndex, text)) errors.push('HTTP API 兼容要求 must not be empty');
+    }
+    if (type === '数据') {
+      const consistency = children.find((item) => item.text === '一致性与兼容');
+      const consistencyIndex = headings.indexOf(consistency);
+      if (!consistency || !sectionHasContent(structure, consistencyIndex, text)) errors.push('数据 一致性与兼容 must not be empty');
+    }
+    if (type === '共享行为') {
+      for (const row of blockTables[0]?.rows ?? []) {
+        const tasks = row[1].split(/[、,，;；/]/).map((item) => item.trim()).filter(Boolean);
+        if (new Set(tasks).size < 2) errors.push('共享行为 must apply to at least two distinct tasks');
+      }
+    }
+  }
+
+  const allowedHeadingLines = new Set([headings[0]?.line, scope?.line, list?.line, gates?.line, ...blocks.map((item) => item.line)]);
+  for (const block of blocks) {
+    const next = blocks.find((item) => item.line > block.line)?.line ?? gates?.line ?? Number.MAX_SAFE_INTEGER;
+    for (const child of headings.filter((item) => item.level === 3 && item.line > block.line && item.line < next)) allowedHeadingLines.add(child.line);
+  }
+  if (headings.some((item) => !allowedHeadingLines.has(item.line))) errors.push('development contract contains an unexpected heading');
+
+  const declared = (baseTables[0]?.rows ?? []).map((row) => [row[0].trim(), row[1].trim() === 'API' ? 'HTTP API' : row[1].trim()]);
+  if (new Set(declared.map(([id]) => id)).size !== declared.length) errors.push('契约清单 contract IDs must be unique');
+  if (new Set(actualContracts.map(([id]) => id)).size !== actualContracts.length) errors.push('development contract block IDs must be unique');
+  if (JSON.stringify(declared.sort()) !== JSON.stringify(actualContracts.sort())) errors.push('契约清单 IDs and types must exactly match the applicable contract blocks');
+  return errors;
+}
+
+function validateCompletedTaskPackage(structure, text) {
+  const errors = [];
+  const headings = structure.headings;
+  if (headings[0]?.level !== 1 || headings[0]?.text !== '任务包') errors.push('task package title must be 任务包');
+  const common = headings[1];
+  if (common?.level !== 2 || common?.text !== '共同开发契约') errors.push('task package must place 共同开发契约 before task sections');
+  if (!/\[共同开发契约\]\(development-contract\.md\)/.test(String(text))) errors.push('task package must link development-contract.md');
+  const tasks = headings.slice(2);
+  if (!tasks.length || tasks.some((item) => item.level !== 2 || !/^.+? · .+$/.test(item.text))) errors.push('task package requires one or more H2 task sections');
+  if (new Set(tasks.map((item) => item.text.split(' · ', 1)[0].trim())).size !== tasks.length) errors.push('task package task IDs must be unique');
+  const lines = String(text).replaceAll('\r\n', '\n').split('\n');
+  for (const [index, task] of tasks.entries()) {
+    const end = tasks[index + 1]?.line ?? lines.length + 1;
+    const body = lines.slice(task.line, end - 1).join('\n');
+    const fields = ['任务目标', '负责契约', '使用契约', '可改范围', '必须读取', '验收标准', '联调条件', '硬阻塞'];
+    const bodyLines = body.split(/\r?\n/);
+    for (const field of fields) {
+      const fieldPattern = new RegExp(`^\\s*(?:[-*]|\\d+\\.)?\\s*${field}[：:]\\s*(.*)$`);
+      const lineIndex = bodyLines.findIndex((line) => fieldPattern.test(line));
+      const match = lineIndex < 0 ? null : bodyLines[lineIndex].match(fieldPattern);
+      if (!match) { errors.push(`${task.text} is missing ${field}`); continue; }
+      const after = match[1].trim();
+      const remaining = bodyLines.slice(lineIndex + 1);
+      const nextIndex = remaining.findIndex((line) => fields.some((name) => new RegExp(`^\\s*[-*]\\s*${name}[：:]`).test(line)));
+      const continuation = remaining.slice(0, nextIndex < 0 ? remaining.length : nextIndex).join('\n').replace(/^[\s*-]+$/gm, '').trim();
+      if (!after && !continuation) errors.push(`${task.text} ${field} must not be empty`);
+    }
+    for (const required of ['requirement.md', 'design-decision.md', 'development-contract.md']) if (!body.includes(`\`${required}\``)) errors.push(`${task.text} must read ${required}`);
+  }
+  return errors;
+}
+
+function contractIdList(value) {
+  const normalized = String(value ?? '').trim().replace(/[。.;；]+$/u, '');
+  if (!normalized || normalized === '无') return [];
+  return normalized.split(/[、,，;；/\s]+/u).map((item) => item.trim()).filter(Boolean);
+}
+
+// Cross-document binding is deliberately defined beside both Markdown
+// grammars so approval transitions and doctor cannot drift into different
+// interpretations of a task's provided/consumed contract IDs.
+export function validateTaskContractReferences(contractText, taskPackageText) {
+  const errors = [];
+  const contract = parseMarkdownStructure(contractText);
+  const listHeading = contract.headings.find((item) => item.level === 2 && item.text === '契约清单');
+  const listEnd = contract.headings.find((item) => item.level === 2 && listHeading && item.line > listHeading.line)?.line ?? Number.MAX_SAFE_INTEGER;
+  const table = contract.tables.find((item) => listHeading && item.line > listHeading.line && item.line < listEnd);
+  const declared = new Set((table?.rows ?? []).map((row) => row[0].trim()).filter(Boolean));
+  const taskPackage = parseMarkdownStructure(taskPackageText);
+  const tasks = taskPackage.headings.filter((item, index) => index > 1 && item.level === 2);
+  const lines = String(taskPackageText).replaceAll('\r\n', '\n').split('\n');
+  const referenced = new Set();
+  for (const [index, task] of tasks.entries()) {
+    const body = lines.slice(task.line, (tasks[index + 1]?.line ?? lines.length + 1) - 1).join('\n');
+    const provided = contractIdList(body.match(/^\s*[-*]\s*负责契约[：:]\s*(.*)$/m)?.[1]);
+    const consumed = contractIdList(body.match(/^\s*[-*]\s*使用契约[：:]\s*(.*)$/m)?.[1]);
+    if (!provided.length && !consumed.length) errors.push(`${task.text} must provide or consume at least one contract ID`);
+    for (const id of [...provided, ...consumed]) {
+      if (!declared.has(id)) errors.push(`unknown contract ID ${id}`);
+      else referenced.add(id);
+    }
+  }
+  for (const id of declared) if (!referenced.has(id)) errors.push(`contract ID ${id} is not assigned to any task`);
   return [...new Set(errors)];
 }
 
@@ -391,6 +601,14 @@ export function validateCompletedDocument(relativePath, text, { expectedPaths = 
         workflowMatch ? `templates/workflow/${workflowMatch[1]}` : normalized;
   const contract = contractFor(templatePath);
   if (contract) {
+    if (templatePath === 'templates/workflow/development-contract.md') {
+      errors.push(...validateCompletedDevelopmentContract(structure, text));
+      return [...new Set(errors)];
+    }
+    if (templatePath === 'templates/workflow/task-package.md') {
+      errors.push(...validateCompletedTaskPackage(structure, text));
+      return [...new Set(errors)];
+    }
     errors.push(...validateStructureContract(templatePath, text, { allowDynamicHeadings: true }));
     const actualHeadings = structure.headings.map((heading) => heading.text);
     const expected = contract.headings ?? [];

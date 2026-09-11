@@ -15,6 +15,7 @@ test('canonical project contract has one document system and all workflow artifa
     'requirement.md',
     'design-alignment.md',
     'design-decision.md',
+    'development-contract.md',
     'task-package.md',
     'development-summary.md',
     'knowledge-update-review.md',

@@ -37,3 +37,10 @@ test('every workflow template has the exact technical-design field contract and 
     assert.deepEqual(lintTemplateText(text), [], `${artifact} must have no few-shot fact`);
   }
 });
+
+test('every development contract block template uses only declared placeholders', async () => {
+  for (const artifact of ['http-api.md', 'public-interface.md', 'data.md', 'cross-task-integration.md', 'shared-behavior.md']) {
+    const text = await readFile(join(packageRoot, 'templates', 'contracts', artifact), 'utf8');
+    assert.deepEqual(lintTemplateText(text), [], `${artifact} must have no few-shot fact`);
+  }
+});

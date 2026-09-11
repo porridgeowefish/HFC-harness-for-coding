@@ -6,7 +6,7 @@ import { promisify } from 'node:util';
 import { CANONICAL_PROJECT_FILES, FORBIDDEN_LEGACY_PATHS, KNOWLEDGE_ROOT_DIRECTORIES, KNOWLEDGE_ROOT_FILES, RULE_FILES, WORKFLOW_ARTIFACTS } from './contract.mjs';
 import { validateHarnessConfig } from './config.mjs';
 import { validateChecklist } from './onboarding.mjs';
-import { validateCompletedDocument, validateStructureContract } from './markdown-contract.mjs';
+import { validateCompletedDocument, validateStructureContract, validateTaskContractReferences } from './markdown-contract.mjs';
 
 async function exists(path) { try { await access(path, constants.F_OK); return true; } catch { return false; } }
 const execFileAsync = promisify(execFile);
@@ -146,9 +146,37 @@ async function markdownContractChecks(root) {
       for (const artifact of WORKFLOW_ARTIFACTS) {
         const path = `docs/workflows/${entry.name}/${artifact}`;
         try {
-          const errors = validateStructureContract(`templates/workflow/${artifact}`, await readFile(join(root, ...path.split('/')), 'utf8'));
+          const text = await readFile(join(root, ...path.split('/')), 'utf8');
+          const errors = artifact === 'development-contract.md' && !/<[^>\r\n]+>/.test(text)
+            ? validateCompletedDocument(path, text)
+            : validateStructureContract(`templates/workflow/${artifact}`, text);
           checks.push({ id: `workflow:${entry.name}:${artifact}`, ok: errors.length === 0, errors });
         } catch (error) { checks.push({ id: `workflow:${entry.name}:${artifact}`, ok: false, errors: [error.message] }); }
+      }
+      try {
+        const contractText = await readFile(join(taskRoot, 'development-contract.md'), 'utf8');
+        const packageText = await readFile(join(taskRoot, 'task-package.md'), 'utf8');
+        if (!/<[^>\r\n]+>/.test(contractText) && !/<[^>\r\n]+>/.test(packageText)) {
+          const errors = validateTaskContractReferences(contractText, packageText);
+          checks.push({ id: `workflow:${entry.name}:contract-references`, ok: errors.length === 0, errors });
+        }
+      } catch (error) { checks.push({ id: `workflow:${entry.name}:contract-references`, ok: false, errors: [error.message] }); }
+      const statePath = join(root, '.codebuddy', 'workflows', entry.name, 'state.json');
+      if (await exists(statePath)) {
+        try {
+          const state = JSON.parse(await readFile(statePath, 'utf8'));
+          const approval = state?.approvals?.task_package;
+          if (approval?.status === 'approved') {
+            const paths = ['design-decision.md', 'development-contract.md', 'task-package.md'].map((file) => `docs/workflows/${entry.name}/${file}`);
+            const diff = await git(root, ['diff', '--quiet', approval.commit, '--', ...paths]);
+            const validCommit = typeof approval.commit === 'string' && approval.commit.length > 0;
+            checks.push({
+              id: `workflow:${entry.name}:approved-design-git-snapshot`,
+              ok: validCommit && diff.code === 0,
+              errors: !validCommit ? ['task-package approval must bind a Git commit'] : diff.code === 1 ? ['approved design artifacts changed since task-package approval'] : diff.code !== 0 ? [`unable to inspect approved design artifacts: ${diff.stderr}`] : []
+            });
+          }
+        } catch (error) { checks.push({ id: `workflow:${entry.name}:approved-design-git-snapshot`, ok: false, errors: [error.message] }); }
       }
     }
   }

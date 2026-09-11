@@ -4,7 +4,7 @@ import { validateHarnessConfig } from '../runtime/config.mjs';
 
 test('harness configuration accepts only the canonical project, gate and integration schema', () => {
   const base = {
-    schemaVersion: '1.0', adapterVersion: '0.7.0',
+    schemaVersion: '1.0', adapterVersion: '0.8.0',
     project: { stack: [], packageManager: 'none', sourceRoots: [], testRoots: [] },
     protectedContracts: ['docs/'], gates: { preCommit: [], ci: [] },
     integrations: { workItem: 'none', codeReview: 'none', ci: 'none' }

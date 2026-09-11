@@ -13,13 +13,15 @@ description: 当用户说“接入 Harness”“初始化 AI 开发流程”“�
 | --- | --- | --- |
 | 接入、初始化、配置 Harness | 主 Agent 先让侦察 subagent 扫描全部可见文件和目录并写入路径骨架；以骨架确定材料、模块和依赖，再动态分发工程分区、业务分区、汇总和 Rules subagent。每个可读路径只分配一个阅读负责人，负责人直接写自己的文档和树项用途；只有上游完成后才启动依赖任务。主 Agent 负责调度、失败重派和最终结构检查，不增加人工审核回合。准备阶段只落静态入口、配置和路径骨架；所有事实 subagent 完成后，顶层 Skill 用自然语言引导负责人完成 checklist，再执行一次应用。 | 管理员提交共享契约到团队 Git 仓库；其他成员只拉取，不重复初始化 |
 | 检查接入、能否开始 | 运行 `harness doctor` | 仅当 doctor 通过且八项 checklist 已确认 |
-| 开始一轮开发、做某个功能 | 先运行 `harness doctor`；通过后运行 `harness start`。运行时已将**全部可见项目文件**写入 `source-materials.md`，并只追加本次用户原话、链接或外部文件位置；本次调用停在 `source_materials`，不执行 `record_source_materials`，也不生成候选结论、正式需求、设计或任务包。下一次用户明确要求推进时，Skill 才调用当前 `next_action=record_source_materials` | 创建十份 workflow 产物与受控 state；下一步为候选评审 |
+| 开始一轮开发、做某个功能 | 先运行 `harness doctor`；通过后运行 `harness start`。运行时已将**全部可见项目文件**写入 `source-materials.md`，并只追加本次用户原话、链接或外部文件位置；本次调用停在 `source_materials`，不执行 `record_source_materials`，也不生成候选结论、正式需求、设计、共同开发契约或任务包。下一次用户明确要求推进时，Skill 才调用当前 `next_action=record_source_materials` | 创建十一份 workflow 产物与受控 state；下一步为候选评审 |
 | 查看进度、继续上次流程 | 读取当前 workflow state、`step`、`summary`、`next_action` 及其引用的 Markdown 产物；只执行 `next_action` 所代表的一件事，写入一次状态转换后停止 | 用户下一次明确调用才进入下一个节点 |
 | 评审、代码审核 | 为当前 MR 快照调用只读 `code-reviewer`；由主流程记录结果 | reviewer 不修改代码或状态 |
 | 出合并报告、收尾 | MR 合并后，基于 state 中的门禁、评审与 MR 事实填写该任务的 `merge-report.md`，再运行 `harness transition <workflow-id> '{"action":"record_merge_report","expectedRevision":<当前>,"by":"<负责人>","at":"<RFC3339>"}'` | 报告内容与 state 事实一致，不虚构未运行的门禁结果 |
 | 补建业务知识、工程模块说明 | 管理员确认分类后，使用 `knowledge-feature <业务模块> <功能点>` 或 `knowledge-module <工程模块>` | 复用已有分类；草案补全并审核后提交 Git，任务内修改遵循知识审核 |
 
 如果用户意图、操作类型、workflow 标题或管理员确认缺失，说明缺少的最小事实并停止。所有阶段推进必须经 `harness transition`，且使用当前 revision；不以聊天记录替代落盘产物或审批。`start` 只创建任务、索引全量材料并停在 `source_materials`，后续调用才执行 `next_action`；每次自然语言调用最多写入一个 workflow 节点并执行一次状态转换。读取到 `next_action` 后，不得预先创建后续节点的正式内容。特别是需求阶段必须严格依序为 `source_materials` → `candidate_review` → `publish_requirement`：候选结论与正式需求均须等用户下一次明确确认，不能由一段模糊功能描述自动跳过。
+
+**设计到开发交接**：设计结论确认后先写 `development-contract.md`，再生成 `task-package.md`。共同开发契约是 API、公共接口、数据、跨任务集成及必要共享行为的唯一正文；任务包只引用它并登记每个任务负责/使用的契约 ID。所有开发任务必须读取同一份共同开发契约。若实现要求改变契约，回退设计阶段并重新确认任务包，不允许在单个开发任务中私自改写共同语义。
 
 **初始化硬规则**：文件树是初始化的第一份知识产物和唯一阅读索引；其输入是全量可见项目文件扫描，绝不将 README、`docs/`、常见目录或扩展名作为材料位置前提。第一轮只写路径骨架（路径行不带套话），随后每个阅读负责人把自己负责的文件和目录回写为真实用途；完成态不得保留空行、泛化描述或 `<...>`。主 Agent 依据实际树动态决定分区，不得把角色或分区写死成教程。不得在阅读文件树列出的项目文件之前写“核心约束”“启动入口”“gates”“harness-self”或其他未登记文档；不得跳过某个可读项目文件后声称已完成初始化。`component.puml` 与从其内容生成的 `component.svg` 必须同时写入，SVG 默认供人阅读。除 workflow 外，初始化完成时所有规范长期文档必须是项目事实，不能含 `<...>` 占位。
 

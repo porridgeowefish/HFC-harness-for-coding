@@ -27,7 +27,7 @@ async function managedRoot(t) {
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(join(root, '.codebuddy'), { recursive: true });
   await writeFile(join(root, '.codebuddy', 'harness.json'), `${JSON.stringify({
-    schemaVersion: '1.0', adapterVersion: '0.7.0',
+    schemaVersion: '1.0', adapterVersion: '0.8.0',
     project: { stack: [], packageManager: 'none', sourceRoots: [], testRoots: [] },
     protectedContracts: ['CODEBUDDY.md'], gates: { preCommit: [], ci: [] },
     integrations: { workItem: 'none', codeReview: 'none', ci: 'none' }
@@ -82,7 +82,7 @@ test('PreToolUse runs the configured preCommit gate for git commit', async (t) =
   await mkdir(join(root, '.codebuddy'), { recursive: true });
   const check = { id: 'forced-failure', command: process.execPath, args: ['-e', 'process.exit(2)'], cwd: '.', timeoutSeconds: 10, required: true };
   await writeFile(join(root, '.codebuddy', 'harness.json'), `${JSON.stringify({
-    schemaVersion: '1.0', adapterVersion: '0.7.0',
+    schemaVersion: '1.0', adapterVersion: '0.8.0',
     project: { stack: [], packageManager: 'none', sourceRoots: [], testRoots: [] },
     protectedContracts: ['CODEBUDDY.md'], gates: { preCommit: [check], ci: [] },
     integrations: { workItem: 'none', codeReview: 'none', ci: 'none' }

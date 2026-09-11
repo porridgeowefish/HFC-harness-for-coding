@@ -16,7 +16,7 @@ const CHECKLIST_PROMPTS = Object.freeze({
   knowledge_accuracy: '项目总览、全量文件树、业务入口、架构图和工程模块说明是否准确且完整？',
   function_currency: '识别到的业务模块与功能点是否都已建立当前功能说明和演变历史？',
   rules_assembly: '五份 Rules 是否已按本项目事实补充并确认适用范围？',
-  workflow_templates: '十份 workflow 产物与审核模板是否已核对？',
+  workflow_templates: '十一份 workflow 产物、五类共同开发契约与审核模板是否已核对？',
   project_materials: '项目专属素材、配置与适配信息是否已具备且不含未决占位？'
 });
 
@@ -472,7 +472,7 @@ export function validateKnowledgeDraft(value, { sourceFiles = null } = {}) {
   return value;
 }
 
-function discoveredConfig(discovery) { return { schemaVersion: '1.0', adapterVersion: '0.7.0', project: { stack: discovery.stack, packageManager: discovery.packageManager, sourceRoots: discovery.sourceRoots, testRoots: discovery.testRoots }, protectedContracts: ['CODEBUDDY.md', 'docs/', '.codebuddy/settings.json', '.codebuddy/harness.json', '.codebuddy/onboarding-checklist.json', '.codebuddy/rules/', '.codebuddy/agents/'], gates: { preCommit: discovery.gates.filter((gate) => gate.id !== 'project-build'), ci: discovery.gates }, integrations: { workItem: 'none', codeReview: 'none', ci: 'none' } }; }
+function discoveredConfig(discovery) { return { schemaVersion: '1.0', adapterVersion: '0.8.0', project: { stack: discovery.stack, packageManager: discovery.packageManager, sourceRoots: discovery.sourceRoots, testRoots: discovery.testRoots }, protectedContracts: ['CODEBUDDY.md', 'docs/', '.codebuddy/settings.json', '.codebuddy/harness.json', '.codebuddy/onboarding-checklist.json', '.codebuddy/rules/', '.codebuddy/agents/'], gates: { preCommit: discovery.gates.filter((gate) => gate.id !== 'project-build'), ci: discovery.gates }, integrations: { workItem: 'none', codeReview: 'none', ci: 'none' } }; }
 
 export async function initializeProject(projectRoot, { apply = false, knowledgeDraft = null, phase = null, sourceEntries = null } = {}) {
   const prepareOnly = phase === 'prepare';

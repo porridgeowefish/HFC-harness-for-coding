@@ -40,7 +40,7 @@ async function inventory(root, prefix = '') {
 test('every template folder is accounted for, including empty folders', async () => {
   const entries = await inventory(join(plugin, 'templates'));
   assert.deepEqual(entries.filter((p) => p.endsWith('/')), [
-    'business/', 'engineering/', 'project/', 'project/.codebuddy/', 'project/.codebuddy/rules/',
+    'business/', 'contracts/', 'engineering/', 'project/', 'project/.codebuddy/', 'project/.codebuddy/rules/',
     'project/docs/', 'project/docs/function/', 'project/docs/knowledge/', 'project/docs/knowledge/architecture/', 'project/docs/workflows/', 'workflow/'
   ]);
 });
@@ -92,7 +92,7 @@ test('package validation rejects legacy empty directories and unexpected folders
   assert.ok(report.legacyFiles.includes('templates/project/knowledge/'));
   assert.ok(report.directoryViolations.includes('unexpected directory: skills/obsolete-skill/'));
 });
-test('workflow templates reproduce the nine Markdown contracts in the technical design', async () => {
+test('workflow templates reproduce the ten Markdown contracts in the technical design', async () => {
   const design = await readFile(join(plugin, '../../技术设计-流程模块与交接协议.md'), 'utf8');
   const sections = [...design.matchAll(/\*\*路径\*\*：`docs\/workflows\/<task-id>\/([^`]+)`(?:(?!\*\*路径\*\*)[\s\S])*?```md\r?\n([\s\S]*?)\r?\n```/g)];
   let count = 0;
@@ -101,5 +101,5 @@ test('workflow templates reproduce the nine Markdown contracts in the technical 
     assert.equal(actual.replaceAll('\r', '').trim(), block.replaceAll('\r', '').trim(), name);
     count++;
   }
-  assert.equal(count, 9);
+  assert.equal(count, 10);
 });
