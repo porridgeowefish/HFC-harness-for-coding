@@ -3,7 +3,7 @@
 ## 安装
 
 1. 添加团队共享的 `ai-market` Marketplace。
-2. 安装 `coding-harness@ai-market` 0.8.0。
+2. 安装 `coding-harness@ai-market` 0.8.1。
 3. 由一位项目管理员在真实业务仓库中用自然语言提出“为当前项目接入 AI Coding Harness”。主 Agent 先让侦察 subagent 全量扫描可见文件和目录并写路径骨架，再根据实际依赖动态分发工程、业务、汇总和 Rules subagent；每个可读路径只由一个负责人读取并直接回写真实用途。顶层 Skill 以自然语言逐项提出八个业务化 checklist 问题并记录明确确认；全部事实完整且无占位符、八项全部确认后才应用。`/coding-harness:init`（识别草案）与 `/coding-harness:init --apply --knowledge <draft.json>`（应用）是备用命令。同一接入过程由一名管理员串行发起，其他成员等待其提交 Git 后拉取。subagent 在 prepare 后直接回写文件时，prepare/finalize 必须留在同一顶层编排会话；脱离会话的 CLI finalize 对已有长期资产 fail-closed，不会覆盖项目文档。
 4. 管理员提交生成的仓库契约到 GitHub 或团队实际使用的代码协作平台；其他成员只拉取该提交，不重新初始化。
 

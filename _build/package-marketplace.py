@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "dist" / "ai-market-0.8.0.zip"
+OUTPUT = ROOT / "dist" / "ai-market-0.8.1.zip"
 INCLUDE_FILES = [ROOT / "README.md"]
 INCLUDE_DIRS = [ROOT / ".codebuddy-plugin", ROOT / "plugins" / "coding-harness"]
 

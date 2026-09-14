@@ -5,14 +5,14 @@
     "name": "AI Coding Harness Maintainers"
   },
   "metadata": {
-    "version": "0.8.0"
+    "version": "0.8.1"
   },
   "plugins": [
     {
       "name": "coding-harness",
       "source": "./plugins/coding-harness",
       "description": "Canonical document-system workflow, deterministic handoff and administrator checklist for CodeBuddy IDE",
-      "version": "0.8.0",
+      "version": "0.8.1",
       "category": "development",
       "author": {
         "name": "AI Coding Harness Maintainers"

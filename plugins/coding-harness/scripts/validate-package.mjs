@@ -6,7 +6,7 @@ import { lintTemplateText, missingTemplateContract } from '../runtime/template-l
 import { validateTemplateContract } from '../runtime/markdown-contract.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const RELEASE_VERSION = '0.8.0';
+const RELEASE_VERSION = '0.8.1';
 
 async function walk(root) {
   const paths = []; const directories = [];

@@ -15,13 +15,18 @@ test('release validator rejects legacy files and accepts the canonical package',
   assert.deepEqual(report.templateViolations, []);
 });
 
-test('every active release surface is pinned to 0.8.0', async () => {
+test('every active release surface is pinned to 0.8.1', async () => {
   const pkg = JSON.parse(await readFile(join(plugin, 'package.json'), 'utf8'));
   const manifest = JSON.parse(await readFile(join(plugin, '.codebuddy-plugin', 'plugin.json'), 'utf8'));
   const marketplace = JSON.parse(await readFile(join(repository, '.codebuddy-plugin', 'marketplace.json'), 'utf8'));
   const build = await readFile(join(repository, '_build', 'package-marketplace.py'), 'utf8');
-  assert.equal(pkg.version, '0.8.0');
-  assert.equal(manifest.version, '0.8.0');
-  assert.equal(marketplace.plugins[0].version, '0.8.0');
-  assert.match(build, /ai-market-0\.8\.0\.zip/);
+  const releaseReadme = await readFile(join(repository, 'README.md'), 'utf8');
+  const pluginReadme = await readFile(join(plugin, 'README.md'), 'utf8');
+  assert.equal(pkg.version, '0.8.1');
+  assert.equal(manifest.version, '0.8.1');
+  assert.equal(marketplace.metadata.version, '0.8.1');
+  assert.equal(marketplace.plugins[0].version, '0.8.1');
+  assert.match(build, /ai-market-0\.8\.1\.zip/);
+  assert.match(releaseReadme, /发布版本：`0\.8\.1`/);
+  assert.match(pluginReadme, /\nVersion 0\.8\.1 /);
 });
