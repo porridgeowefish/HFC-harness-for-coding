@@ -29,7 +29,7 @@
 
 第一版采用 **CodeBuddy Plugin 核心 + 项目仓库适配层**。Plugin 作为产品与统一分发载体，在内部插件市场集中维护通用 Skills、独立评审 SubAgent、CodeBuddy Hooks 和确定性执行器；业务仓库保存本项目的安装声明、构建/测试/扫描配置、Rules、流程文档与运行状态。项目已有的 Git Hook 与 CI 可按 `harness.json` 声明的门禁命令自行接入，不是初始化器固定生成的目录。当前只设计 CodeBuddy 版本，不承担 Claude Code 或 Codex 的兼容。
 
-项目首次接入存在一个明确的引导安装步骤：项目负责人先从内部插件市场安装 Harness Plugin，再在业务仓库内使用自然语言“为当前项目接入 AI Coding Harness”或备用入口 `/coding-harness:init` 启动初始化。主 Agent 先让侦察 subagent 枚举全部可见项目文件和目录并写入路径骨架，不把 README、`docs/`、固定目录名或扩展名当作原始材料位置；随后依据实际树动态分发工程分区、业务分区、汇总和 Rules subagent。每个可读路径只分配一个负责人，负责人直接写自己的文档并回写树项真实用途；汇总和 Rules 任务等待依赖完成，失败由主 Agent 重派。顶层 Skill 以自然语言逐项引导负责人完成八项 checklist；全部事实完整且无占位符才允许应用。管理员将共享契约提交到 Git，其他成员只拉取。
+项目首次接入存在一个明确的引导安装步骤：项目负责人先从内部插件市场安装 Harness Plugin，再在业务仓库内使用自然语言“为当前项目接入 AI Coding Harness”或备用入口 `/coding-harness:init` 启动初始化。主 Agent 枚举全部可见项目文件和目录，运行时写入路径骨架；不把 README、`docs/`、固定目录名或扩展名当作原始材料位置。随后依据实际树动态分发互斥的工程与业务路径给对应 subagent：业务 Agent 只写 `docs/function/**` 和业务入口，工程 Agent 只写项目总览、工程模块和组件图源；Rules Agent 最后只写 Rules。文件树和 SVG 由运行时一次性写入，所有 subagent 均不得回写树项。每个可读路径只分配一个阅读负责人，失败由主 Agent 重派；subagent 回报只含路径、未识别项和必要交接，CLI 只显示计数与识别提示。顶层 Skill 以自然语言逐项引导负责人完成八项 checklist；全部事实完整且无占位符才允许应用。管理员将共享契约提交到 Git，其他成员只拉取。
 
 自然语言“开始一轮开发”不授权模型一口气完成 workflow：它创建 workflow 时先全量枚举项目可见文件并登记为原始材料索引，再只追加用户本轮原话、链接或外部材料位置，状态停在 `source_materials`。下一次明确调用才允许候选评审；再下一次负责人确认候选后才允许发布正式需求；进入设计仍等待后续调用。`state.json` 的 `step`、`summary` 和 `next_action` 是唯一流程游标，每次调用只执行一个游标动作，不能以一段模糊功能描述推断为已经授权需求、设计和开发。
 
@@ -43,7 +43,7 @@ CODEBUDDY.md                    # 常驻层上下文，≤200 行
 .codebuddy/harness.json         # 本项目构建、测试、扫描和门禁配置
 .codebuddy/rules/               # 按需层规约，每份声明适用场景
 .codebuddy/onboarding-checklist.json # 管理员接入确认记录
-.codebuddy/agents/code-reviewer.md # 项目只读评审定义
+.codebuddy/agents/               # 项目只读评审与三类初始化 subagent 定义
 ```
 
 AI 和初始化器不得把上述路径加入 `.gitignore`、`.git/info/exclude` 或其他忽略规则，也不得以“本地 AI 配置”为由建议忽略它们。初始化自检应验证这些仓库契约未被忽略；管理员提交后还应验证其已被 Git 跟踪。只有 `.codebuddy/workflows/` 等机器运行态目录和个人本地覆盖配置可以被忽略。
@@ -176,7 +176,10 @@ AI 和初始化器不得把上述路径加入 `.gitignore`、`.git/info/exclude`
     ├── rules/                      # 按需层规约
     ├── onboarding-checklist.json   # 管理员接入确认记录
     ├── agents/
-    │   └── code-reviewer.md        # 从插件 agents 源定义复制的只读评审 Agent
+    │   ├── code-reviewer.md        # 从插件 agents 源定义复制的只读评审 Agent
+    │   ├── business-knowledge-writer.md # 初始化业务知识写入 Agent
+    │   ├── engineering-knowledge-writer.md # 初始化工程知识写入 Agent
+    │   └── rules-writer.md         # 初始化 Rules 写入 Agent
     └── workflows/                  # 机器运行态，默认 gitignore
         └── <task-id>/
             ├── state.json
@@ -421,7 +424,7 @@ docs/function/                    # 功能知识库：业务模块 → 功能点
 
 #### 机制三：初始化由依赖图分发，负责人确认 checklist，不增加中间审核回合
 
-初始化由主 Agent 维护会话内依赖图：侦察先写路径骨架，工程和业务 subagent 分别直接写不重叠的模块/功能文档，汇总 subagent 在上游完成后写项目总览、业务入口和组件图，Rules subagent 最后写五份规则及知识入口。主 Agent 只负责调度、失败重派和确定性结构校验，不把所有源码集中到一个上下文，也不设置额外的人审中间回合。负责人只需在顶层 Skill 的自然语言 checklist 中确认或纠正事实，Git 是共享版本依据。
+初始化由主 Agent 维护会话内依赖图：主 Agent 扫描路径，运行时先写路径骨架；工程和业务 subagent 分别直接写互不重叠的工程/功能文档，工程路径完成后业务 Agent 写业务入口，Rules subagent 最后写五份规则及知识入口。`文件树.md` 与组件 SVG 始终由运行时统一写入，subagent 不得写树或 SVG。主 Agent 只负责调度、失败重派和确定性结构校验，不把所有源码集中到一个上下文；subagent 回报只含必要路径和交接，也不设置额外的人审中间回合。负责人只需在顶层 Skill 的自然语言 checklist 中确认或纠正事实，Git 是共享版本依据。
 
 #### 机制四：工程知识采用混合式渐进披露，源码仍是实现事实
 
@@ -1022,7 +1025,7 @@ CODEBUDDY.md                      # 常驻层，≤200 行，Git 跟踪
 
 ### 决策
 
-1. 初始化由主 Agent 在会话内维护依赖图并分发 subagent：侦察先写全量路径骨架；每个可读路径只分配一个阅读负责人；工程、业务、汇总和 Rules 任务按实际依赖动态启动，写入范围互不重叠。subagent 直接写自己负责的长期文档，主 Agent 只做调度、失败重派和确定性结构校验，不增加中间人工审核回合。prepare、subagent 回写和 finalize 属于同一顶层编排会话；脱离会话的 CLI finalize 对已有长期资产按冲突处理，不能用未持久化的清单覆盖。
+1. 初始化由主 Agent 在会话内维护依赖图并分发 subagent：主 Agent 扫描全量路径，运行时先写路径骨架；每个可读路径只分配一个业务或工程阅读负责人；业务、工程和 Rules 任务按实际依赖动态启动，写入范围互不重叠。业务、工程、Rules subagent 直接写自己负责的长期文档；`文件树.md` 与组件 SVG 仅由运行时写入。主 Agent 只做调度、失败重派和确定性结构校验，不增加中间人工审核回合，subagent 与 CLI 不得回传全量扫描或源码全文。prepare、subagent 回写和 finalize 属于同一顶层编排会话；脱离会话的 CLI finalize 对已有长期资产按冲突处理，不能用未持久化的清单覆盖。
 2. 文件树分两态：探索态只有路径行，完成态每行必须有基于阅读的具体用途。不得以“源码目录”“配置文件”“业务逻辑”“用途待确认”等套话代替事实；二进制、符号链接和不可读项必须标明类别或原因。
 3. 统一 Markdown 结构由 allowlist 解析器验证。项目总览在技术栈之后固定包含“软件设计架构”；工程模块固定包含九个业务相关章节；功能描述固定包含元数据和五个章节；Rules 固定包含“必须遵守、相关知识入口、验证方式、更新门槛”。模板中的动态值只能使用声明的 `<...>`，完成态不得有未替换占位符，知识链接必须指向存在的相对路径。
 4. 架构图同时保存 `component.puml` 和面向人的 `component.svg`。Git 是共享契约、文档版本和历史追溯的唯一依据；本版本不引入 digest、内容哈希、CAS 或额外初始化锁。

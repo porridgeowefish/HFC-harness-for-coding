@@ -50,6 +50,9 @@ test('fresh project and on-demand knowledge match the documented destinations', 
   await initializeConfirmed(root, reviewedDraft());
   assert.deepEqual((await inventory(root)).filter((p) => !p.endsWith('/')), [...CANONICAL_PROJECT_FILES].sort());
   assert.equal(await readFile(join(root, '.codebuddy/agents/code-reviewer.md'), 'utf8'), await readFile(join(plugin, 'agents/code-reviewer.md'), 'utf8'));
+  for (const agent of ['business-knowledge-writer.md', 'engineering-knowledge-writer.md', 'rules-writer.md']) {
+    assert.equal(await readFile(join(root, '.codebuddy/agents', agent), 'utf8'), await readFile(join(plugin, 'agents', agent), 'utf8'));
+  }
   await createBusinessFeature(root, '业务模块', '功能点', FEATURE_FACTS);
   await createEngineeringModule(root, '工程模块', MODULE_FACTS);
   for (const path of ['docs/function/业务模块/function.json', 'docs/function/业务模块/功能点/功能描述.md', 'docs/function/业务模块/功能点/功能演变历史.md', 'docs/knowledge/modules/工程模块.md']) await readFile(join(root, path));

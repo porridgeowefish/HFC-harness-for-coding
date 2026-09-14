@@ -40,6 +40,12 @@ const PREPARE_SCAFFOLD_DIRECTORIES = new Set([
   'docs', 'docs/knowledge', 'docs/knowledge/architecture', 'docs/knowledge/modules',
   'docs/function', 'docs/workflows'
 ]);
+const AGENT_DEFINITION_FILES = Object.freeze([
+  'code-reviewer.md',
+  'business-knowledge-writer.md',
+  'engineering-knowledge-writer.md',
+  'rules-writer.md'
+]);
 // The prepare/finalize boundary is a session protocol.  Keep the original
 // inventory in memory so a later finalize call does not mistake the scaffold
 // itself for user source material.  No project-side state file is introduced.
@@ -89,8 +95,9 @@ async function visibleProjectEntries(root, excluded = new Set()) {
 
 async function isPrepareScaffold(root, path, scaffold = {}) {
   const target = join(root, ...path.split('/'));
-  if (path === 'CODEBUDDY.md' || path === '.codebuddy/settings.json' || path === '.codebuddy/agents/code-reviewer.md' || path === 'docs/workflows/README.md') {
-    const source = path === '.codebuddy/agents/code-reviewer.md' ? join(pluginRoot, 'agents', 'code-reviewer.md') : join(templateRoot, ...path.split('/'));
+  if (path === 'CODEBUDDY.md' || path === '.codebuddy/settings.json' || path.startsWith('.codebuddy/agents/') || path === 'docs/workflows/README.md') {
+    const agentName = path.startsWith('.codebuddy/agents/') ? path.slice('.codebuddy/agents/'.length) : null;
+    const source = agentName && AGENT_DEFINITION_FILES.includes(agentName) ? join(pluginRoot, 'agents', agentName) : join(templateRoot, ...path.split('/'));
     try { return (await readFile(target)).equals(await readFile(source)); } catch { return false; }
   }
   if (path === 'docs/knowledge/文件树.md') {
@@ -212,14 +219,12 @@ async function reusablePreparedAssetErrors(root, relativePath, { expectedPaths =
   return validateCompletedDocument(relativePath, text, relativePath.endsWith('文件树.md') ? { expectedPaths } : {});
 }
 
-function mixedFileTreeSkeleton(text) {
+function preparedFileTreeSkeleton(text) {
   if (/<[^>\r\n]+>/.test(text)) return false;
   const lines = String(text).split(/\r?\n/).filter((line) => line.trim());
   return lines.every((line) => {
     if (line.startsWith('# 文件树') || line.startsWith('初始化分工骨架：') || line.startsWith('全量项目导航：')) return true;
-    const row = line.match(/^\s*- `[^`]+`(?: — (.+))?$/);
-    if (!row) return false;
-    return !row[1] || !/(?:用途待确认|用途待项目管理员确认|源码目录|业务逻辑|配置文件|目录用途)/.test(row[1]);
+    return /^\s*- `[^`]+`\/?$/.test(line);
   });
 }
 
@@ -533,16 +538,12 @@ export async function initializeProject(projectRoot, { apply = false, knowledgeD
       if (phase === 'finalize') {
         const existing = await readFile(target);
         const original = await readFile(source);
-        const isPreparedTree = targetRelative === 'docs/knowledge/文件树.md' && mixedFileTreeSkeleton(existing.toString('utf8'));
+        const isPreparedTree = targetRelative === 'docs/knowledge/文件树.md' && preparedFileTreeSkeleton(existing.toString('utf8'));
         if (!existing.equals(original) && !isPreparedTree) {
           // Static prepare assets are owned by the initializer and must not be
-          // edited between phases.  A completed tree is the one exception:
-          // subagents are explicitly allowed to backfill its real purposes.
-          if (targetRelative !== 'docs/knowledge/文件树.md') conflicts.push(targetRelative);
-          else {
-            const errors = await reusablePreparedAssetErrors(root, targetRelative, { expectedPaths: preparedBaseline });
-            if (errors.length) conflicts.push(targetRelative);
-          }
+          // edited between phases. The runtime is also the sole file-tree
+          // writer, so a completed-looking tree from a subagent is a conflict.
+          conflicts.push(targetRelative);
         }
       } else conflicts.push(targetRelative);
     } else { created.push(targetRelative); copies.push([source, target]); }
@@ -562,16 +563,19 @@ export async function initializeProject(projectRoot, { apply = false, knowledgeD
       } else conflicts.push(relativePath);
     } else { created.push(relativePath); generated.push([target, value]); }
   }
-  const reviewer = '.codebuddy/agents/code-reviewer.md';
-  if (await exists(join(root, reviewer))) {
-    if (phase === 'finalize') {
-      const existing = await readFile(join(root, reviewer));
-      const original = await readFile(join(pluginRoot, 'agents', 'code-reviewer.md'));
-      if (!existing.equals(original)) conflicts.push(reviewer);
-    } else conflicts.push(reviewer);
-  } else {
-    created.push(reviewer);
-    copies.push([join(pluginRoot, 'agents', 'code-reviewer.md'), join(root, reviewer)]);
+  for (const agentName of AGENT_DEFINITION_FILES) {
+    const agentPath = `.codebuddy/agents/${agentName}`;
+    const target = join(root, ...agentPath.split('/'));
+    if (await exists(target)) {
+      if (phase === 'finalize') {
+        const existing = await readFile(target);
+        const original = await readFile(join(pluginRoot, 'agents', agentName));
+        if (!existing.equals(original)) conflicts.push(agentPath);
+      } else conflicts.push(agentPath);
+    } else {
+      created.push(agentPath);
+      copies.push([join(pluginRoot, 'agents', agentName), target]);
+    }
   }
   const ignorePath = join(root, '.gitignore');
   let ignoreText = '';

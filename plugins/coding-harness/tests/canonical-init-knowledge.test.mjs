@@ -169,7 +169,7 @@ test('prepare writes only the path skeleton and finalize writes the fact-filled 
   assert.match(await readFile(join(root, '.codebuddy/rules/architecture.md'), 'utf8'), /## 必须遵守/);
 });
 
-test('finalize accepts valid owner backfills made after the path skeleton', async (t) => {
+test('finalize accepts valid knowledge owner backfills made after the path skeleton', async (t) => {
   const root = await scratch(t);
   await writeFile(join(root, 'main.go'), 'package main\n', 'utf8');
   await initializeProject(root, { phase: 'prepare' });
@@ -181,12 +181,24 @@ test('finalize accepts valid owner backfills made after the path skeleton', asyn
     '## 兼容边界', '', '保持路径兼容', '', '## 生效机制', '', '启动时生效', '', '## 易误判点', '', '不是业务规则', '',
     '## 事实依据', '', '- `main.go`'
   ].join('\n'));
-  await writeFile(join(root, 'docs/knowledge/文件树.md'), '# 文件树\n\n- `main.go` — 程序入口\n');
   const draft = structuredClone(VALID_DRAFT);
   draft.fileTreeDescriptions = { 'main.go': '程序入口与进程启动' };
   const finalized = await initializeProject(root, { phase: 'finalize', knowledgeDraft: draft, sourceEntries: ['main.go'] });
   assert.equal(finalized.knowledgeFilled, true);
   assert.ok((await readFile(join(root, 'docs/knowledge/modules/路由注册.md'), 'utf8')).includes('## 易误判点'));
+});
+
+test('finalize rejects a file tree changed by a subagent because runtime is its only writer', async (t) => {
+  const root = await scratch(t);
+  await writeFile(join(root, 'main.go'), 'package main\n', 'utf8');
+  await initializeProject(root, { phase: 'prepare' });
+  for (const id of CHECKLIST_IDS) await confirmChecklistItem(root, { id, actor: 'owner', at: '2026-09-10T00:00:00.000Z' });
+  await writeFile(join(root, 'docs/knowledge/文件树.md'), '# 文件树\n\n- `main.go` — 非运行时写入\n');
+  const draft = structuredClone(VALID_DRAFT);
+  draft.fileTreeDescriptions = { 'main.go': '程序入口与进程启动' };
+  const result = await initializeProject(root, { phase: 'finalize', knowledgeDraft: draft, sourceEntries: ['main.go'] });
+  assert.equal(result.ok, false);
+  assert.ok(result.conflicts.includes('docs/knowledge/文件树.md'));
 });
 
 test('discovery inventories every visible material without assuming a README or conventional directory', async (t) => {

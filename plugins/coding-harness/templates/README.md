@@ -18,12 +18,12 @@
 
 - `.codebuddy/harness.json`：来自项目探索结果。
 - `.codebuddy/onboarding-checklist.json`：固定八项管理员检查。
-- `.codebuddy/agents/code-reviewer.md`：复制插件 `agents/code-reviewer.md` 的单一源定义。
+- `.codebuddy/agents/*.md`：复制插件的 `code-reviewer`、`business-knowledge-writer`、`engineering-knowledge-writer`、`rules-writer` 定义；前三个初始化写入者职责互斥，reviewer 保持只读。
 - `.codebuddy/workflows/<workflow-id>/state.json`：来自当前流程事实。
 - `docs/knowledge/文件树.md`：初始化、创建业务功能、工程模块或 workflow 时刷新导航；树形缩进输出。
 - `docs/workflows/README.md`：总任务导航；每个任务的 `README.md` 导航到其十份业务产物。
 
-初始化由顶层自然语言 Skill 调度动态 subagent 图：侦察任务先写全量路径骨架；每个可读路径只分配给一个阅读负责人，工程/业务负责人直接回写各自文档和树项用途；汇总和 Rules 负责人等待上游完成后写真实内容。CLI 是受控持久化边界：`harness init --phase prepare` 只落静态入口、共享配置和路径骨架；顶层 Skill 在同一编排会话中引导八项 checklist 后，`harness init --phase finalize --knowledge <draft.json>` 才以真实内容写入 `docs/knowledge/项目总览.md`、`业务入口.md`、`architecture/component.puml` 与同轮人读 `architecture/component.svg`，并主动生成识别到的 `docs/knowledge/modules/<工程模块>.md`、`docs/function/` 业务模块与功能点目录以及 Rules。脱离 prepare 会话的 standalone finalize 对已有长期资产 fail-closed，不覆盖项目文档；无完整事实草案或未确认 checklist 不得应用占位骨架。
+初始化由顶层自然语言 Skill 调度动态 subagent 图：主 Agent 先扫描全量路径，运行时写路径骨架；每个可读路径只分配给一位业务或工程阅读负责人。`business-knowledge-writer` 只写 `docs/function/**` 和依赖工程路径的 `业务入口.md`；`engineering-knowledge-writer` 只写项目总览、工程模块说明和 `component.puml`；`rules-writer` 只在知识入口落盘后写 Rules。三个 Agent 都不得写文件树；运行时根据它们的已阅读事实一次写入 `docs/knowledge/文件树.md`，并从 `component.puml` 渲染供人阅读的 SVG。CLI 是受控持久化边界：`harness init --phase prepare` 只落静态入口、共享配置和路径骨架；顶层 Skill 在同一编排会话中引导八项 checklist 后，`harness init --phase finalize --knowledge <draft.json>` 才应用完整事实。CLI 输出只含计数和识别提示，不含全量路径清单。脱离 prepare 会话的 standalone finalize 对已有长期资产 fail-closed，不覆盖项目文档；无完整事实草案或未确认 checklist 不得应用占位骨架。
 
 本地证据确实需要文件存储时，使用 `.codebuddy/workflows/<workflow-id>/evidence/`；外部证据可保留链接。没有本地证据时不创建空 evidence 目录。
 

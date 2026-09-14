@@ -26,6 +26,9 @@ export const CHECKLIST_IDS = Object.freeze([
 export const CANONICAL_PROJECT_FILES = Object.freeze([
   'CODEBUDDY.md',
   '.codebuddy/agents/code-reviewer.md',
+  '.codebuddy/agents/business-knowledge-writer.md',
+  '.codebuddy/agents/engineering-knowledge-writer.md',
+  '.codebuddy/agents/rules-writer.md',
   '.codebuddy/settings.json', '.codebuddy/harness.json', '.codebuddy/onboarding-checklist.json',
   ...RULE_FILES.map((name) => `.codebuddy/rules/${name}`),
   'docs/knowledge/项目总览.md', 'docs/knowledge/文件树.md', 'docs/knowledge/业务入口.md',

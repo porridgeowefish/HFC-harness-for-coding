@@ -65,6 +65,19 @@ test('the natural-language checklist status exposes prompts instead of raw JSON 
   assert.equal(after.items[0].confirmed, true);
 });
 
+test('init CLI reports a compact discovery summary instead of the complete scan inventory', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'canonical-init-cli-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await writeFile(join(root, 'private-material-that-must-not-enter-chat.txt'), 'internal project material', 'utf8');
+  const cli = join(process.cwd(), 'bin', 'harness.mjs');
+  const { stdout } = await execFileAsync(process.execPath, [cli, 'init', '--phase', 'prepare'], { cwd: root });
+  const report = JSON.parse(stdout);
+  assert.equal(report.phase, 'prepared');
+  assert.equal(report.discovery.fileCount, 1);
+  assert.equal(Object.hasOwn(report, 'fullScan'), false);
+  assert.equal(stdout.includes('private-material-that-must-not-enter-chat.txt'), false);
+});
+
 test('doctor rejects undocumented top-level knowledge files', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'canonical-knowledge-allowlist-'));
   t.after(() => rm(root, { recursive: true, force: true }));

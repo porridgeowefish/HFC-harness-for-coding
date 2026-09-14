@@ -17,6 +17,35 @@ async function optionalJsonArgument(flag) {
   return JSON.parse(await readFile(resolve(path), 'utf8'));
 }
 
+function compactInitReport(result) {
+  const discovery = result.discovery ?? {};
+  const scan = discovery.fullScan ?? {};
+  const files = Array.isArray(scan.files) ? scan.files : [];
+  const entries = Array.isArray(scan.entries) ? scan.entries : [];
+  return {
+    ok: result.ok,
+    apply: result.apply,
+    phase: result.phase,
+    created: result.created,
+    updated: result.updated,
+    conflicts: result.conflicts,
+    knowledgeFilled: result.knowledgeFilled,
+    requiredFiles: result.requiredFiles,
+    discovery: {
+      fileCount: files.length,
+      directoryCount: entries.filter((entry) => entry.kind === 'directory').length,
+      readableTextCount: files.filter((file) => file.classification === 'readable_text').length,
+      unreadableCount: files.filter((file) => file.classification !== 'readable_text').length,
+      stack: discovery.stack ?? [],
+      packageManager: discovery.packageManager ?? null,
+      sourceRoots: discovery.sourceRoots ?? [],
+      testRoots: discovery.testRoots ?? [],
+      gates: (discovery.gates ?? []).map((gate) => gate.id),
+      missing: discovery.unrecognized ?? []
+    }
+  };
+}
+
 if (command === 'knowledge-feature') {
   console.log(JSON.stringify(await createBusinessFeature(project, args[0], args[1], await optionalJsonArgument('--facts')), null, 2));
 } else if (command === 'knowledge-module') {
@@ -27,7 +56,7 @@ if (command === 'knowledge-feature') {
   const phaseIndex = args.indexOf('--phase');
   const phase = phaseIndex >= 0 ? args[phaseIndex + 1] : null;
   if (phase !== null && !['prepare', 'finalize'].includes(phase)) throw new Error('--phase must be prepare or finalize');
-  console.log(JSON.stringify(await initializeProject(project, { apply: args.includes('--apply'), knowledgeDraft, phase }), null, 2));
+  console.log(JSON.stringify(compactInitReport(await initializeProject(project, { apply: args.includes('--apply'), knowledgeDraft, phase })), null, 2));
 } else if (command === 'checklist-confirm') {
   const [id, actor] = args;
   console.log(JSON.stringify(await confirmChecklistItem(project, { id, actor }), null, 2));
