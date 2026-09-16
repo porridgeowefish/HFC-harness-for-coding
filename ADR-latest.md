@@ -191,7 +191,7 @@ AI 和初始化器不得把上述路径加入 `.gitignore`、`.git/info/exclude`
 1. **按读者分区**：`docs/` 保存人读文档及其轻量 JSON 索引、架构图源文件和渲染图；`.codebuddy/workflows/` 是机器运行态。`.codebuddy/` 其余内容是团队共享配置，必须由 Git 跟踪，不得整体忽略。
 2. **按时效分区**：`docs/knowledge/` 与 `docs/function/` 是长期知识，验收后仍然有效；`docs/workflows/<task-id>/` 是本轮流程实例，验收后保留为任务记录但不进入后续默认上下文。
 3. **workflow 是完整事务边界**：从原始材料索引、候选评审、正式需求，到设计、开发、评审、知识更新审核和合并报告，全部只落在同一 `docs/workflows/<task-id>/` 下；不得为候选稿或需求模板另建跨工作流目录。
-4. **`docs/knowledge/` 与 `docs/function/` 平级且职责互斥**：前者回答“这个工程怎么组织、代码在哪、架构为什么这样”，后者回答“系统有哪些业务功能、规则是什么、为什么演变成现在这样”。功能点属业务知识，不放进 `knowledge/`。
+4. **`docs/knowledge/` 与 `docs/function/` 平级且职责互斥**：前者回答“这个工程怎么组织、代码在哪、架构为什么这样”，并保存跨模块稳定的 API、数据与集成语义；后者回答“系统有哪些业务功能、规则是什么、为什么演变成现在这样”。功能点属业务知识，不放进 `knowledge/`。
 
 **文件命名口径**
 
@@ -215,6 +215,24 @@ AI 和初始化器不得把上述路径加入 `.gitignore`、`.git/info/exclude`
 | 代码合并报告 | `docs/workflows/<task-id>/merge-report.md` |
 
 **术语消歧**：`docs/knowledge/modules/` 指**工程模块**（代码组织单元）；`docs/function/<业务模块>/` 指**业务模块**（业务能力划分）。两者不是同一概念，也不要求一一对应。
+
+**共享开发知识库**：`docs/knowledge/api/`、`data/`、`integration/` 是第三类长期工程知识，面向跨模块、跨任务复用的共享开发事实，而非某轮设计档案。目录固定如下：
+
+```text
+docs/knowledge/
+├── api/
+│   ├── README.md                 # API 总索引、权威 OpenAPI/IDL 位置、版本与兼容原则
+│   └── <领域或服务>.md            # 接口清单、请求响应、错误语义、兼容要求与事实依据
+├── data/
+│   ├── README.md                 # 数据总索引、权威 DDL/Migration 位置与变更原则
+│   ├── <数据域>.md                # 实体、表关系、字段语义、索引、约束与事实依据
+│   └── erd.puml / erd.svg        # 可版本管理的 ER 图源及默认供人阅读的渲染图
+└── integration/
+    ├── README.md                 # 外部系统、RPC、消息事件总索引
+    └── <系统或事件域>.md          # 提供/消费方、Schema、认证、幂等、顺序与失败处理
+```
+
+OpenAPI/IDL、Migration/DDL、受控 Schema、Topic/网关/适配器配置才是可执行事实的权威来源；Markdown 负责导航、语义解释、关系与兼容边界，并必须链接事实依据。workflow 的 `development-contract.md` 只记录本轮增量、负责方、使用方和验证方式，不能替代长期库。验收后由 `knowledge-update-review.md` 决定是否回写：已验收的 API、数据或集成契约变化必须更新对应长期条目；纯本轮临时 Mock、试验性实现或未确认方案不得写入。
 
 ---
 
@@ -504,7 +522,7 @@ AI 生成任务包后，向人汇总四项开工判断：
 
 本轮设计围绕正式需求单进行工程探索、确认必要决策并拆为可执行任务。设计产物只保留让执行者能做事的必要信息：本轮要改什么、关键约束是什么、任务如何独立完成和验证。它不是项目知识库的重复副本。
 
-验收后，本轮人类可读材料保留在 `docs/workflows/<task-id>/` 作为任务记录，但不进入后续任务的默认上下文。长期资产是否更新，先由独立 `knowledge-update-review.md` 逐项判定并经人审核；只有被批准、对未来任务仍有价值的内容，才收敛进长期知识：功能变化进 `docs/function/` 对应功能点，架构取舍与工程约束进 `docs/knowledge/`。
+验收后，本轮人类可读材料保留在 `docs/workflows/<task-id>/` 作为任务记录，但不进入后续任务的默认上下文。长期资产是否更新，先由独立 `knowledge-update-review.md` 逐项判定并经人审核；只有被批准、对未来任务仍有价值的内容，才收敛进长期知识：功能变化进 `docs/function/` 对应功能点，架构取舍与工程约束进 `docs/knowledge/`，已验收的 API、数据与跨系统契约变化分别进 `docs/knowledge/api/`、`data/`、`integration/`。
 
 ### 2.3 具体实现手段
 
