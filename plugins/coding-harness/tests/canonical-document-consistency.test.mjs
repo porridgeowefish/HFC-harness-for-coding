@@ -44,13 +44,11 @@ test('the active plugin contract contains no content digest mechanism', async ()
   }
 });
 
-test('release documentation marks v0.7 historical and keeps the v0.8 artifact order', async () => {
+test('release documentation uses Git for history and keeps the current artifact order', async () => {
   const readme = await readFile(join(repository, 'README.md'), 'utf8');
-  const oldSpec = await readFile(join(repository, 'docs', 'superpowers', 'specs', '2026-09-09-v07-distributed-initialization-and-markdown-contract.md'), 'utf8');
   const workflowReadme = await readFile(join(plugin, 'templates', 'workflow', 'README.md'), 'utf8');
-  assert.match(oldSpec, /历史版本，已被 0\.8\.0 取代/);
-  assert.match(oldSpec, /历史口径（已失效）/);
-  assert.match(readme, /0\.7\.0 初始化设计.*仅保留为历史记录/);
+  assert.match(readme, /已失效的阶段性方案不再随源码分发；需要追溯时使用 Git 历史/);
+  assert.doesNotMatch(readme, /docs\/superpowers\/specs/);
   const positions = ['design-decision.md', 'development-contract.md', 'task-package.md'].map((name) => workflowReadme.indexOf(name));
   assert.ok(positions.every((position, index) => position >= 0 && (index === 0 || position > positions[index - 1])));
 });

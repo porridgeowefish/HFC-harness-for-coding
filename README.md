@@ -126,9 +126,9 @@ codebuddy plugin list --json
 
 ## 版本与验收
 
-本包版本为 `0.8.1`。发布前执行 `npm test --prefix plugins/coding-harness` 与 `npm run validate --prefix plugins/coding-harness`；详细的结构与模板核查记录位于源码仓库的 `docs/目录与模板二次核查报告.md`。
+本包版本为 `0.8.1`。发布前执行 `npm test --prefix plugins/coding-harness` 与 `npm run validate --prefix plugins/coding-harness`；历史压缩包、临时验收报告和构建缓存不再保存在源码仓库，发布物由当前源码按需构建。
 
-当前规范来源为《技术设计-流程模块与交接协议》、`ADR-latest.md` 及 [0.8.0 共同开发契约](docs/superpowers/specs/2026-09-10-v08-shared-development-contract.md)。[0.7.0 初始化设计](docs/superpowers/specs/2026-09-09-v07-distributed-initialization-and-markdown-contract.md)仅保留为历史记录，其中与 0.8.0 冲突的流程文件数量和交接定义均已失效。
+当前规范只以《技术设计-流程模块与交接协议》和 `ADR-latest.md` 为准。已失效的阶段性方案不再随源码分发；需要追溯时使用 Git 历史。
 
 ## 验证
 
