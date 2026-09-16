@@ -6,7 +6,7 @@ import { lintTemplateText, missingTemplateContract } from '../runtime/template-l
 import { validateTemplateContract } from '../runtime/markdown-contract.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const RELEASE_VERSION = '0.8.1';
+const RELEASE_VERSION = '0.9.0';
 
 async function walk(root) {
   const paths = []; const directories = [];
@@ -23,7 +23,7 @@ async function walk(root) {
 
 export const PACKAGE_DIRECTORIES = Object.freeze([
   '.codebuddy-plugin/', 'agents/', 'bin/', 'commands/', 'hooks/', 'runtime/', 'schemas/', 'scripts/', 'skills/',
-  ...['harness-orchestrator', 'independent-review', 'knowledge-update-review', 'requirement-publication', 'solution-design', 'task-implementation'].map((name) => `skills/${name}/`),
+  'skills/harness/', 'skills/harness/references/',
   'templates/', 'templates/business/', 'templates/contracts/', 'templates/decisions/', 'templates/engineering/', 'templates/shared/', 'templates/project/', 'templates/project/.codebuddy/', 'templates/project/.codebuddy/rules/',
   'templates/project/docs/', 'templates/project/docs/function/', 'templates/project/docs/knowledge/', 'templates/project/docs/knowledge/architecture/',
   'templates/project/docs/workflows/', 'templates/workflow/', 'tests/'
@@ -84,8 +84,10 @@ export async function validatePackage(root = packageRoot) {
   const hookConfig = JSON.parse(await readFile(join(root, 'hooks', 'hooks.json'), 'utf8'));
   const session = hookConfig.hooks?.SessionStart;
   const preTool = hookConfig.hooks?.PreToolUse;
+  const expectedMatchers = ['^(Write|Edit|write_to_file|replace_in_file)$', '^(Bash|execute_command)$'];
   const hookViolation = !Array.isArray(session) || !Array.isArray(session[0]?.hooks) || session[0].hooks[0]?.type !== 'command' ||
-    !Array.isArray(preTool) || preTool[0]?.matcher !== 'Write|Edit|write_to_file|replace_in_file|Bash|execute_command' || !Array.isArray(preTool[0]?.hooks) || preTool[0].hooks[0]?.type !== 'command'
+    !Array.isArray(preTool) || JSON.stringify(preTool.map((entry) => entry.matcher)) !== JSON.stringify(expectedMatchers) ||
+    preTool.some((entry) => !Array.isArray(entry.hooks) || entry.hooks[0]?.type !== 'command')
     ? ['hooks.json does not use the canonical CodeBuddy matcher/hooks structure'] : [];
   const violations = [...directoryViolations, ...legacyFiles.map((path) => `legacy path: ${path}`), ...templateViolations, ...contractViolations, ...templateRuleViolations, ...(artifactMismatch ? ['workflow template set differs from canonical artifact set'] : []), ...(templateRulesMismatch ? ['template Rule set differs from canonical Rules'] : []), ...manifestViolations, ...hookViolation];
   return { ok: violations.length === 0, violations, directories: directories.sort(), directoryViolations, legacyFiles, templateViolations };

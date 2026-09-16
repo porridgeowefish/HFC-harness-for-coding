@@ -24,10 +24,11 @@ const proposedText = [toolInput.content, toolInput.new_string, toolInput.newText
 function decision(allow, reason, rule) {
   const value = {
     continue: allow,
-    hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: allow ? 'allow' : 'deny' }
+    hookSpecificOutput: { hookEventName: 'PreToolUse' }
   };
   if (!allow) {
     value.reason = reason;
+    value.hookSpecificOutput.permissionDecision = 'deny';
     value.hookSpecificOutput.permissionDecisionReason = reason;
     value.systemMessage = `${rule}: ${reason}`;
   }
@@ -79,11 +80,13 @@ if (scope === 'broken') {
   console.log(JSON.stringify(output));
   process.exit(0);
 }
-if (/Write|Edit|write_to_file|replace_in_file/.test(toolName) && /(?:^|\/)\.codebuddy\/workflows\/[^/]+\/state\.json$/i.test(normalizedTarget)) {
+const writeTools = new Set(['Write', 'Edit', 'write_to_file', 'replace_in_file']);
+const commandTools = new Set(['Bash', 'execute_command']);
+if (writeTools.has(toolName) && /(?:^|\/)\.codebuddy\/workflows\/[^/]+\/state\.json$/i.test(normalizedTarget)) {
   output = decision(false, 'Use the harness transition runtime; state.json is write-protected.', 'runtime_state_write');
-} else if (/Write|Edit|write_to_file|replace_in_file/.test(toolName) && ['.gitignore', 'exclude'].includes(basename(normalizedTarget)) && ignoresSharedContract(proposedText)) {
+} else if (writeTools.has(toolName) && ['.gitignore', 'exclude'].includes(basename(normalizedTarget)) && ignoresSharedContract(proposedText)) {
   output = decision(false, 'Only .codebuddy/workflows/ may be ignored; keep shared Harness contracts tracked by Git.', 'ignore_shared_contract');
-} else if (/Bash|execute_command/.test(toolName)) {
+} else if (commandTools.has(toolName)) {
   const command = String(toolInput.command ?? toolInput.cmd ?? '');
   if (mutatesWorkflowState(command)) {
     output = decision(false, 'Use the harness transition runtime; shell commands cannot write, move or remove workflow state.json.', 'runtime_state_write');

@@ -9,6 +9,7 @@ import { CHECKLIST_IDS, CHECKLIST_LABELS } from '../runtime/contract.mjs';
 
 const plugin = join(dirname(fileURLToPath(import.meta.url)), '..');
 const hook = join(plugin, 'hooks', 'pre-tool-use.mjs');
+const sessionHook = join(plugin, 'hooks', 'session-start.mjs');
 
 async function invoke(input, root = plugin) {
   return new Promise((resolve, reject) => {
@@ -19,6 +20,17 @@ async function invoke(input, root = plugin) {
     child.on('error', reject);
     child.on('close', (code) => code === 0 ? resolve(JSON.parse(stdout)) : reject(new Error(stderr)));
     child.stdin.end(JSON.stringify(input));
+  });
+}
+
+async function invokeSession(root) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [sessionHook], { cwd: root, env: { ...process.env, CODEBUDDY_PROJECT_ROOT: root }, shell: false });
+    let stdout = ''; let stderr = '';
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', reject);
+    child.on('close', (code) => code === 0 ? resolve(JSON.parse(stdout)) : reject(new Error(stderr)));
   });
 }
 
@@ -39,8 +51,11 @@ async function managedRoot(t) {
 test('hook package uses CodeBuddy matcher groups', async () => {
   const value = JSON.parse(await readFile(join(plugin, 'hooks', 'hooks.json'), 'utf8'));
   assert.ok(Array.isArray(value.hooks.SessionStart[0].hooks));
-  assert.equal(value.hooks.PreToolUse[0].matcher, 'Write|Edit|write_to_file|replace_in_file|Bash|execute_command');
-  assert.ok(Array.isArray(value.hooks.PreToolUse[0].hooks));
+  assert.deepEqual(value.hooks.PreToolUse.map((entry) => entry.matcher), [
+    '^(Write|Edit|write_to_file|replace_in_file)$',
+    '^(Bash|execute_command)$'
+  ]);
+  assert.ok(value.hooks.PreToolUse.every((entry) => Array.isArray(entry.hooks)));
 });
 
 test('PreToolUse protects state and shared contracts without blocking the runtime ignore rule', async (t) => {
@@ -51,6 +66,7 @@ test('PreToolUse protects state and shared contracts without blocking the runtim
 
   const allowed = await invoke({ hook_event_name: 'PreToolUse', tool_name: 'Edit', tool_input: { file_path: '.gitignore', new_string: '.codebuddy/workflows/\n' } }, root);
   assert.equal(allowed.continue, true);
+  assert.equal(Object.hasOwn(allowed.hookSpecificOutput, 'permissionDecision'), false);
 
   const denied = await invoke({ hook_event_name: 'PreToolUse', tool_name: 'Edit', tool_input: { file_path: '.gitignore', new_string: '.codebuddy/\n' } }, root);
   assert.equal(denied.continue, false);
@@ -74,6 +90,7 @@ test('PreToolUse protects state and shared contracts without blocking the runtim
   }
   const readOnly = await invoke({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: 'cat .codebuddy/workflows/wf-20260908-abc123/state.json' } }, root);
   assert.equal(readOnly.continue, true);
+  assert.equal(Object.hasOwn(readOnly.hookSpecificOutput, 'permissionDecision'), false);
 });
 
 test('PreToolUse runs the configured preCommit gate for git commit', async (t) => {
@@ -98,13 +115,26 @@ test('unmanaged projects receive no-op hooks and never run a Harness gate', asyn
   t.after(() => rm(root, { recursive: true, force: true }));
   const result = await invoke({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: 'git commit -m test' } }, root);
   assert.equal(result.continue, true);
-  const sessionHook = join(plugin, 'hooks', 'session-start.mjs');
-  const session = await new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [sessionHook], { cwd: root, env: { ...process.env, CODEBUDDY_PROJECT_ROOT: root }, shell: false });
-    let stdout = ''; let stderr = '';
-    child.stdout.on('data', (chunk) => { stdout += chunk; }); child.stderr.on('data', (chunk) => { stderr += chunk; });
-    child.on('error', reject); child.on('close', (code) => code === 0 ? resolve(JSON.parse(stdout)) : reject(new Error(stderr)));
-  });
+  assert.equal(Object.hasOwn(result.hookSpecificOutput, 'permissionDecision'), false);
+  const session = await invokeSession(root);
   assert.equal(session.continue, true);
   assert.equal(session.hookSpecificOutput.additionalContext, '');
+});
+
+test('SessionStart injects only one most-recent unfinished workflow and a bounded count', async (t) => {
+  const root = await managedRoot(t);
+  const workflowRoot = join(root, '.codebuddy', 'workflows');
+  await mkdir(join(workflowRoot, 'wf-old'), { recursive: true });
+  await mkdir(join(workflowRoot, 'wf-new'), { recursive: true });
+  await writeFile(join(workflowRoot, 'wf-old', 'state.json'), `${JSON.stringify({ task_id: 'wf-old', status: 'running', stage: 'requirement', next_action: 'record_source_materials', updated_at: '2026-09-01T00:00:00.000Z' })}\n`);
+  await writeFile(join(workflowRoot, 'wf-new', 'state.json'), `${JSON.stringify({ task_id: 'wf-new', status: 'waiting_human', stage: 'design', next_action: 'record_task_package_approval', updated_at: '2026-09-02T00:00:00.000Z' })}\n`);
+  const session = await invokeSession(root);
+  const context = session.hookSpecificOutput.additionalContext;
+  assert.ok(context.length <= 1024);
+  assert.match(context, /未完成 workflow：2/);
+  assert.match(context, /wf-new/);
+  assert.match(context, /design/);
+  assert.match(context, /record_task_package_approval/);
+  assert.doesNotMatch(context, /wf-old/);
+  assert.doesNotMatch(context, /\"unfinished\"\s*:/);
 });

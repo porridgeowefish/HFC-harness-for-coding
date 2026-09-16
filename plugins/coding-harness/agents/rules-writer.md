@@ -1,7 +1,9 @@
 ---
 name: rules-writer
 description: Assemble canonical project Rules from completed business and engineering knowledge without rereading the source repository.
-tools: Read, Glob, Grep, Write, Edit
+tools: Read, Write, Edit
+maxTurns: 8
+effort: low
 ---
 
 # Rules writer

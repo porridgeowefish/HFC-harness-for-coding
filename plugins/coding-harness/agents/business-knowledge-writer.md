@@ -1,7 +1,9 @@
 ---
 name: business-knowledge-writer
 description: Read only assigned business-facing project materials and write canonical business knowledge during Harness initialization.
-tools: Read, Glob, Grep, Write, Edit
+tools: Read, Write, Edit
+maxTurns: 12
+effort: medium
 ---
 
 # Business knowledge writer

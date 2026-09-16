@@ -1,6 +1,6 @@
 # ADR · AI 赋能开发全流程冷启动体系
 
-> **现行一致性口径（2026-09-14）**：生成项目的目录、Rules、十一份 workflow 产物、`state.json` 字段、模板字段契约和知识审核枚举，均以《技术设计-流程模块与交接协议》为唯一规范。本 ADR 中与其不一致的历史方案、路径、规则文件名、阶段名、字段或版本号全部失效；ADR 仅保留不冲突的决策理由、权限隔离、原子写入、证据与门禁原则。当前插件版本为 `0.8.1`，`harness.json` 适配器合同仍为 `0.8.0`。
+> **现行一致性口径（2026-09-16）**：生成项目的目录、Rules、十一份 workflow 产物、`state.json` 字段、模板字段契约和知识审核枚举，均以《技术设计-流程模块与交接协议》为唯一规范。本 ADR 中与其不一致的历史方案、路径、规则文件名、阶段名、字段或版本号全部失效；ADR 仅保留不冲突的决策理由、权限隔离、原子写入、证据与门禁原则。当前插件版本为 `0.9.0`，`harness.json` 适配器合同仍为 `0.8.0`。
 
 > 本文档记录"做哪些机制"与"为什么这样取舍"的决策过程，逐阶段推进。  
 > 每条决策按四段结构展开：开发流程 / 机制确认 / 具体实现手段 / 取舍。
@@ -535,7 +535,7 @@ AI 生成任务包后，向人汇总四项开工判断：
 
 ### 2.3 具体实现手段
 
-第一版采用项目内 Markdown。初始化时先生成路径行组成的全量`文件树.md`骨架，再由分区 subagent 按实际阅读回写每项真实用途，随后一次写完`项目总览.md`（含软件设计架构）、`业务入口.md`、默认组件图的 `.puml` 与面向人的 `.svg`、识别到的工程模块、`docs/function/` 的模块和功能点、以及项目 Rules；只有 workflow 保持按需求创建。所有模板由结构 allowlist 校验标题、章节、表头和 `<...>` 声明，完成态不得保留占位或泛化用途。文件树在初始化、创建知识条目和创建 workflow 后刷新；自然语言意图由 `harness-orchestrator` 与阶段 Skills 装配到相应入口。
+第一版采用项目内 Markdown。初始化时先生成路径行组成的全量`文件树.md`骨架，再由按知识职责拆分的业务与工程 subagent 阅读主 Agent 明确分配的路径并写入各自文档，随后一次写完`项目总览.md`（含软件设计架构）、`业务入口.md`、默认组件图的 `.puml` 与面向人的 `.svg`、识别到的工程模块、`docs/function/` 的模块和功能点、以及项目 Rules；只有 workflow 保持按需求创建。所有模板由结构 allowlist 校验标题、章节、表头和 `<...>` 声明，完成态不得保留占位或泛化用途。文件树始终由运行时汇总回写；自然语言意图由唯一 `harness` Skill 路由，阶段过程从其 `references/` 按当前 `next_action` 只加载一份。
 
 ### 2.4 取舍
 
@@ -882,8 +882,8 @@ CodeBuddy PreToolUse Hook
 
 Plugin 注册两个 Hook：
 
-- `SessionStart`：检查项目是否完成接入，并提示唯一可恢复任务；多个未完成任务时只列出，不自动选择。
-- `PreToolUse`：匹配写入与命令类工具，阻止直接改写运行态 `state.json`、阻止把整个 `.codebuddy/` 或共享契约加入忽略规则，并在明确执行提交动作前运行已配置的 `preCommit` 门禁。它不建立 `constraints/` 或路径注入轨。
+- `SessionStart`：检查项目是否完成接入；只注入未完成总数和最近更新的一个任务的 ID、阶段、下一动作，固定限制在 1 KiB 内。其他任务按需查询，不注入正文或完整数组。
+- `PreToolUse`：用锚定 matcher 匹配写入与命令类工具，阻止直接改写运行态 `state.json`、阻止把整个 `.codebuddy/` 或共享契约加入忽略规则，并在明确执行提交动作前运行已配置的 `preCommit` 门禁。正常路径只返回 `continue:true`，不返回 `permissionDecision: allow`，因此不绕过 CodeBuddy 原生权限系统。
 
 命令入口由 Plugin 提供；业务仓库不复制 `.codebuddy/scripts/harness.mjs`。CI、本地 Hook 或其他平台集成只能按项目确认后的适配方式调用门禁，不把某个平台或脚本路径写死为默认产物。
 
@@ -891,7 +891,7 @@ Plugin 注册两个 Hook：
 
 ### 8.3 已实现交付
 
-第一版按上述契约实现为 CodeBuddy Marketplace：市场名固定为 `ai-market`，根目录 `.codebuddy-plugin/marketplace.json` 是市场入口；插件名固定为 `coding-harness`，`plugins/coding-harness/` 是 Plugin 本体。自然语言通过六个聚焦 Skills 路由，四个 `/coding-harness:<command>` 作为备用入口。Plugin 还包含一个只读独立评审 Agent、两个 Hooks、状态与门禁运行时、业务仓库初始化模板、JSON Schema 和自动化测试。此清单必须随实际包结构同步，不能把未生成的 Git/CI 文件写成已交付。
+0.9 按上述契约实现为 Git CodeBuddy Marketplace：市场名固定为 `ai-market`，根目录 `.codebuddy-plugin/marketplace.json` 是市场入口；插件名固定为 `coding-harness`，`plugins/coding-harness/` 是 Plugin 本体。自然语言只通过一个 `harness` Skill 路由，六个阶段过程位于 `skills/harness/references/` 并按需读取；`/coding-harness:<command>` 作为备用入口。Plugin 还包含四个有工具白名单和 turn 上限的 subagent、两个有界 Hooks、状态与门禁运行时、初始化模板、JSON Schema 和自动化测试。不再构建或分发 ZIP，版本发布以 Marketplace 仓库的 Git 提交和版本号为准。
 
 管理员共享配置必须写入业务仓库的 `.codebuddy/settings.json` 并由 Git 跟踪；共享配置使用团队可访问的 Git Marketplace URL，不得写入个人电脑的本地绝对路径。具体安装与发布步骤见 `docs/INSTALL-CODEBUDDY-IDE.md`。
 
@@ -901,7 +901,7 @@ Plugin 注册两个 Hook：
 
 经验账本不能把单次任务的具体经过、具体修复步骤或局部结论直接作为后续模型必须遵循的提示词。候选经验必须先提炼为可迁移的抽象要点，并明确适用条件与边界；否则具体案例会诱导模型机械套用，造成提示词过拟合。
 
-第一版由 `knowledge-update-review` Skill 在合并前审核长期知识与 Rules 是否需要更新。它只从已完成任务的正式产物提取可迁移事实，不读取或复制原始对话、模型思考和整段终端日志。单次偶发现象保留在任务文档，不自动成为长期规则。
+知识更新由 `harness` Skill 按需读取 `references/knowledge-update.md`，在合并前审核长期知识与 Rules 是否需要更新。它只从已完成任务的正式产物提取可迁移事实，不读取或复制原始对话、模型思考和整段终端日志。单次偶发现象保留在任务文档，不自动成为长期规则。
 
 ### 9.2 抽象与审核契约
 
@@ -934,7 +934,7 @@ Plugin 增加统一主入口 `/coding-harness:start`。普通用户不再需要�
 
 CodeBuddy `SessionStart` Hook 的 stdout 进入 Agent 上下文，不等于用户可见欢迎页。因此 Hook 只使用结构化 `additionalContext` 注入导航规则，不承担主动弹窗。欢迎与下一步提示由 `/coding-harness:start`、接入完成处理和各阶段 Skill 的输出契约负责。
 
-第一版由 `harness-orchestrator` Skill 与 `SessionStart` Hook 分担引导：Skill 识别自然语言意图并调用受控运行时，Hook 只报告接入状态和未完成任务。两者不直接改写状态、不执行 Git、不代替项目负责人确认；与 Harness 无关的普通问答不强制进入流程。
+0.9 由唯一 `harness` Skill 与 `SessionStart` Hook 分担引导：Skill 识别自然语言意图、读取当前节点的一份 reference 并调用受控运行时；Hook 只报告接入状态、未完成总数和最近一个任务。两者不直接改写状态、不执行 Git、不代替项目负责人确认；与 Harness 无关的普通问答不强制进入流程。
 
 完整交互和验收契约见 `docs/specs/2026-09-07-guided-user-experience-design.md`。
 

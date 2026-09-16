@@ -23,15 +23,25 @@ if (await exists(workflowRoot)) {
     if (!entry.isDirectory()) continue;
     try {
       const state = JSON.parse(await readFile(join(workflowRoot, entry.name, 'state.json'), 'utf8'));
-      if (state.status !== 'completed') unfinished.push({ task_id: state.task_id, stage: state.stage, next_action: state.next_action });
-    } catch { unfinished.push({ task_id: entry.name, stage: 'invalid', next_action: 'repair_state' }); }
+      if (state.status !== 'completed') unfinished.push({
+        taskId: String(state.task_id ?? entry.name),
+        stage: String(state.stage ?? 'invalid'),
+        nextAction: String(state.next_action ?? 'repair_state'),
+        updatedAt: Number.isFinite(Date.parse(state.updated_at)) ? Date.parse(state.updated_at) : 0
+      });
+    } catch { unfinished.push({ taskId: entry.name, stage: 'invalid', nextAction: 'repair_state', updatedAt: 0 }); }
   }
 }
-const status = { onboarding: await exists(join(root, '.codebuddy', 'onboarding-checklist.json')) ? 'present' : 'missing', unfinished };
+unfinished.sort((a, b) => b.updatedAt - a.updatedAt || a.taskId.localeCompare(b.taskId));
+const recent = unfinished[0];
+const clip = (value, length = 160) => String(value ?? '').replace(/[\r\n]/g, ' ').slice(0, length);
+const additionalContext = recent
+  ? `AI Coding Harness：未完成 workflow：${unfinished.length}。当前只恢复最近任务：id=${clip(recent.taskId)}；stage=${clip(recent.stage)}；next_action=${clip(recent.nextAction)}。${unfinished.length > 1 ? `另有 ${unfinished.length - 1} 个未完成任务，按需使用 status 查询，不自动注入。` : ''}`
+  : 'AI Coding Harness：未完成 workflow：0。';
 console.log(JSON.stringify({
   continue: true,
   hookSpecificOutput: {
     hookEventName: 'SessionStart',
-    additionalContext: `AI Coding Harness status: ${JSON.stringify(status)}`
+    additionalContext: additionalContext.slice(0, 1024)
   }
 }));

@@ -2,6 +2,8 @@
 name: code-reviewer
 description: Independently review one stable MR snapshot without modifying project files.
 tools: Read, Glob, Grep
+maxTurns: 12
+effort: high
 ---
 
 # Independent code reviewer

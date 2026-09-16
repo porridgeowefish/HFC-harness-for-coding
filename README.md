@@ -1,82 +1,59 @@
 # AI Coding Harness · CodeBuddy Plugin
 
-发布版本：`0.8.1`
+发布版本：`0.9.0`
 
-这是给 CodeBuddy 的团队开发流程插件。它通过自然语言引导项目完成接入、需求澄清、设计、开发、评审和知识回写；不是要求成员手工维护 workflow JSON 的项目模板。
-
-## 先理解这个压缩包
-
-`ai-market-0.8.1.zip` 是一个**本地 Marketplace 快照**，不是可直接放进项目 `.codebuddy/` 的单插件目录。解压后的根目录必须保持以下相对结构，不能只拷贝其中一个子目录：
-
-```text
-<解压目录>/
-├── README.md
-├── .codebuddy-plugin/marketplace.json
-└── plugins/
-    └── coding-harness/
-```
-
-直接发 ZIP 适合离线试用或小范围验收；它不会自动向团队同步更新。团队长期使用时，建议把这个完整目录发布到公司 Git 仓库，按“团队分发”安装。
+这是给 CodeBuddy 的团队开发流程插件。它通过一个自然语言入口引导项目完成初始化、需求澄清、设计、开发、独立评审和知识回写；成员无需手工维护 workflow JSON。
 
 ## 前置条件
 
-- 已安装并登录支持 Plugin Marketplace 的 CodeBuddy Code；看不到 `/plugin` 时先升级 CodeBuddy。
-- 运行插件的机器有 Node.js 20 或更高版本（`node --version`）及 Git。
-- 只从可信来源安装。插件的 Hook 和运行时会以当前用户权限执行项目内的受控检查。
+- CodeBuddy Desktop 或 CLI 支持 Plugin Marketplace；看不到 `/plugin` 时先升级。
+- Node.js 20 或更高版本，以及 Git。
+- 一个团队成员都能访问的 Git 仓库。仓库根必须保留 `.codebuddy-plugin/marketplace.json` 和 `plugins/coding-harness/`。
 
-官方 Plugin Marketplace 说明：<https://www.codebuddy.cn/docs/cli/plugin-marketplaces>。
+只从可信仓库安装。插件 Hook 与运行时会以当前用户权限执行项目内检查。
 
-## 从 ZIP 安装：CodeBuddy 桌面端
+## 发布仓库
 
-1. 将 ZIP 解压到稳定位置。例如 Windows：`D:\Tools\ai-market-0.8.1`。不要在临时下载目录中直接使用，后续移动或删除该目录会使本地 Marketplace 失效。
-2. 在 CodeBuddy Desktop 的 CodeBuddy Code 对话/命令输入框执行：
+本仓库就是 Git Marketplace 源，不再制作或分发 ZIP。当前本地仓库尚未配置远程地址；发布者先把它推送到 GitHub 或团队代码平台，并用真实地址替换下文的 `<marketplace-git-url>`。
 
-   ```text
-   /plugin marketplace add "D:\Tools\ai-market-0.8.1"
-   /plugin install coding-harness@ai-market
-   /reload-plugins
-   ```
+每次发布必须同时更新 Marketplace、插件 manifest 和 npm package 的版本，提交并推送 Git。CodeBuddy 使用缓存的版本快照，不会直接执行发布者工作区里的未提交文件。
 
-   若使用插件管理界面：运行 `/plugin`，在 **Marketplaces** 添加“本地目录”，选择解压根目录；再在 **Discover** 中安装 `coding-harness@ai-market`。默认的“用户作用域”适合个人试用。
-3. 在任意业务仓库打开新的 CodeBuddy 会话，直接用下文的自然语言开始使用。
+## CodeBuddy Desktop 安装
 
-安装、启用或禁用插件后，`/reload-plugins` 可以在不重启的情况下重新加载。
+在 CodeBuddy Code 对话框执行：
 
-## 从 ZIP 安装：CodeBuddy CLI
+```text
+/plugin marketplace add <marketplace-git-url>
+/plugin install coding-harness@ai-market
+/reload-plugins
+```
 
-先解压，再在终端运行。Windows 路径请改成你的实际解压目录：
+也可运行 `/plugin`，在 **Marketplaces** 添加 Git 仓库，再从 **Discover** 安装 `coding-harness@ai-market`。个人试用使用用户作用域；团队项目可在确认仓库可信后使用项目作用域。
+
+## CodeBuddy CLI 安装
 
 ```powershell
-codebuddy plugin marketplace add "D:\Tools\ai-market-0.8.1" --name ai-market
+codebuddy plugin marketplace add <marketplace-git-url> --name ai-market
 codebuddy plugin install coding-harness@ai-market --scope user
 codebuddy plugin list --json
 ```
 
-`--scope user` 只对当前用户生效，最适合 ZIP 分发的试用场景。随后在目标业务仓库启动 `codebuddy`，并用自然语言操作即可。
+随后在目标业务仓库启动 `codebuddy`，直接用自然语言操作。
 
-> 不建议把一个同事电脑上的本地 ZIP 路径写进项目共享设置。其他成员没有同一个路径时无法物化插件。
+## 更新
 
-## 团队长期分发（推荐）
-
-把 ZIP 解压后的**完整根目录**提交到公司 Git 平台；仓库根必须有 `.codebuddy-plugin/marketplace.json`。每位成员只需添加同一个 Git Marketplace：
-
-```powershell
-codebuddy plugin marketplace add https://<公司代码平台>/<组织>/ai-market.git --name ai-market
-codebuddy plugin install coding-harness@ai-market --scope project
-```
-
-在 Desktop 中执行等价的两条 `/plugin marketplace add ...`、`/plugin install ...` 也可以。项目作用域会把启用声明写入项目 `.codebuddy/settings.json`；成员信任项目后可安装相同插件。发布新版本后执行：
+成员只需注册一次 Marketplace。发布者推送版本更新后，开启自动更新的客户端会周期性检查；需要立即获取时手动执行：
 
 ```powershell
 codebuddy plugin marketplace update ai-market
-codebuddy plugin update coding-harness@ai-market --scope project
+codebuddy plugin update coding-harness@ai-market --scope user
 ```
 
-Git Marketplace 会物化完整插件目录，因此适合本插件这种包含 Skills、Commands、Hooks 和本地运行时文件的发布方式。
+Desktop 可执行等价的 `/plugin marketplace update ai-market` 与 `/plugin update coding-harness@ai-market`，随后 `/reload-plugins` 或开启新会话。若最初以项目作用域安装，把命令中的 `--scope user` 改为 `--scope project`。
 
-## 日常使用：只说自然语言
+## 自然语言使用
 
-无需记忆 Slash Command、JSON 字段或 workflow revision。打开业务仓库后，可以直接对 CodeBuddy 说：
+无需记忆 Slash Command、JSON 字段或 revision。可以直接说：
 
 - “为当前项目接入 AI Coding Harness。”
 - “检查 Harness 接入状态。”
@@ -85,55 +62,48 @@ Git Marketplace 会物化完整插件目录，因此适合本插件这种包含 
 - “查看当前流程进度。”
 - “评审当前 MR。”
 
-插件会把自然语言路由到受控流程。第一次接入由**一位项目管理员**完成：主 Agent 全量扫描项目文件，运行时先生成文件树骨架；业务与工程 subagent 只写各自的长期知识，Rules subagent 最后建立索引，运行时再统一刷新文件树并渲染 SVG。子 Agent 只回传路径、未识别项和必要交接，初始化 CLI 也只显示计数与识别提示，不会把全量扫描或源码内容注入对话。随后管理员逐项确认八项 checklist，并将生成的共享契约提交 Git。prepare 后的 subagent 回写与 finalize 必须在同一顶层编排会话中完成；CLI 脱离该会话遇到既有长期资产会安全停止，不会覆盖。其他成员只拉取，不要重复初始化。
+0.9 只暴露一个 `harness` Skill。它依据当前状态只加载一个阶段 reference，一次调用最多推进一个 workflow 节点。比如“开始一轮开发”只创建任务、索引原始材料并停在 `source_materials`；下一次明确调用才进入候选评审。
 
-一次自然语言调用最多推进当前 workflow 的一个节点。比如“开始一轮开发”只会建立全量原始材料索引、记录本次用户原话并停在 `source_materials`；下一次明确调用才推进候选评审。它不会因为描述看起来完整就自动生成需求、设计和代码。
+## 初始化方式
 
-设计完成后，插件先生成 `development-contract.md`，再生成任务包。它是所有开发任务共同读取的唯一契约正文，按需包含 HTTP API、公共接口、数据、跨任务集成和必要的共享行为；普通状态、权限和行为结果仍写入验收标准。任务包只引用契约 ID，不复制契约正文。实现中需要改变契约时必须退回设计并重新确认任务包。
+初始化由一名项目管理员发起，其他成员等待其提交 Git 后拉取：
 
-## 生成什么、需要提交什么
+1. 主 Agent 全量扫描项目，运行时先生成文件树路径骨架。
+2. 主 Agent 按真实依赖把明确路径分别交给业务知识 writer 和工程知识 writer；writer 不自行 Glob/Grep 全仓。
+3. 业务 writer 写业务知识，工程 writer 写项目总览、工程模块和组件图源；Rules writer 最后只读取已落盘知识。
+4. 运行时统一回写文件树，并渲染默认供人查看的 SVG。
+5. 顶层 Skill 逐项询问八个 checklist 问题并代用户记录确认；用户不编辑 JSON。
+6. doctor 验证结构、完成态内容，以及共享契约未被 Git 忽略且已被跟踪。
+7. 管理员提交共享契约；其他成员不重复初始化。
 
-接入完成后，业务仓库只有这一套文档体系：
+同一项目不要由多人同时初始化。初始化应写完 workflow 之外的全部规范长期文档，不创建 `gates.md`、`harness-self.md`、`核心约束.md` 或 `启动入口.md`。
+
+## 生成与提交
 
 ```text
-docs/knowledge/       # 项目总览、文件树、业务入口、架构图和工程模块
-docs/function/        # 业务模块、功能点、功能说明与演变历史
+docs/knowledge/       # 项目总览、文件树、业务入口、架构、工程与共享开发知识
+docs/function/        # 业务模块、功能说明与演变历史
 docs/workflows/       # 每轮需求到合并的人读档案
-.codebuddy/           # 共享配置、Rules、checklist 与 reviewer 定义
+.codebuddy/           # 共享配置、Rules、checklist、agents 与本地 workflow 状态
 ```
 
 必须提交 Git：`CODEBUDDY.md`、`docs/`、`.codebuddy/settings.json`、`.codebuddy/harness.json`、`.codebuddy/onboarding-checklist.json`、`.codebuddy/rules/`、`.codebuddy/agents/`。
 
-唯一默认忽略的运行态是 `.codebuddy/workflows/`。不要手工编辑其中的 `state.json`，也不要手工伪造 checklist；自然语言入口和运行时会写入这些受控事实。
+唯一默认忽略项是 `.codebuddy/workflows/`。不要直接编辑其中的 `state.json`。`SessionStart` 仅注入未完成总数及最近一个任务的阶段和下一动作；`PreToolUse` 只在确定违规时拒绝，不替 CodeBuddy 绕过正常权限确认。
 
-## 排障入口
+## 共同开发契约
 
-日常仍优先自然语言。需要确认插件是否已就绪或定位问题时，可用：
+设计完成后先生成 `development-contract.md`，再生成任务包。共同开发契约是所有开发任务共同读取的唯一契约正文，按需包含 HTTP API、公共接口、数据、跨任务集成和必要共享行为。普通状态、权限和行为结果仍写验收标准。实现需要改变契约时必须退回设计并重新确认任务包。
 
-```text
-/coding-harness:doctor
-/coding-harness:status <workflow-id>
-```
+## 排障与验收
 
-CLI 可先检查安装与市场状态：
+日常优先使用自然语言。管理员可用 `/coding-harness:doctor` 和 `/coding-harness:status <workflow-id>` 排障。
+
+发布前执行：
 
 ```powershell
-codebuddy plugin marketplace list
-codebuddy plugin list --json
+npm test --prefix plugins/coding-harness
+npm run validate --prefix plugins/coding-harness
 ```
 
-若 `/plugin` 不存在，先运行 `codebuddy --version` 并升级 CodeBuddy；若插件刚安装但未出现，运行 `/reload-plugins` 或重新启动 CodeBuddy。不要复制插件目录到 CodeBuddy 缓存目录，也不要让插件引用解压目录以外的文件。
-
-## 版本与验收
-
-本包版本为 `0.8.1`。发布前执行 `npm test --prefix plugins/coding-harness` 与 `npm run validate --prefix plugins/coding-harness`；历史压缩包、临时验收报告和构建缓存不再保存在源码仓库，发布物由当前源码按需构建。
-
-当前规范只以《技术设计-流程模块与交接协议》和 `ADR-latest.md` 为准。已失效的阶段性方案不再随源码分发；需要追溯时使用 Git 历史。
-
-## 验证
-
-```bash
-cd plugins/coding-harness
-npm test
-npm run validate
-```
+现行规范以《技术设计-流程模块与交接协议》和 `ADR-latest.md` 为准。已失效的阶段性方案不再随源码分发；需要追溯时使用 Git 历史。

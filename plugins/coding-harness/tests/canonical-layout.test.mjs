@@ -44,6 +44,12 @@ test('every template folder is accounted for, including empty folders', async ()
     'project/docs/', 'project/docs/function/', 'project/docs/knowledge/', 'project/docs/knowledge/architecture/', 'project/docs/workflows/', 'shared/', 'workflow/'
   ]);
 });
+test('the plugin exposes one Harness skill with stage references', async () => {
+  assert.deepEqual((await inventory(join(plugin, 'skills'))).filter((path) => path.endsWith('/')), ['harness/', 'harness/references/']);
+  assert.deepEqual((await readdir(join(plugin, 'skills', 'harness', 'references'))).sort(), [
+    'design.md', 'implementation.md', 'initialization.md', 'knowledge-update.md', 'requirement.md', 'review.md'
+  ]);
+});
 test('fresh project and on-demand knowledge match the documented destinations', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'harness-layout-'));
   t.after(() => rm(root, { recursive: true, force: true }));

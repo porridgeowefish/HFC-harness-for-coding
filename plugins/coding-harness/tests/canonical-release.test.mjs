@@ -15,18 +15,20 @@ test('release validator rejects legacy files and accepts the canonical package',
   assert.deepEqual(report.templateViolations, []);
 });
 
-test('every active release surface is pinned to 0.8.1', async () => {
+test('every active release surface is pinned to 0.9.0 and distributed by Git Marketplace', async () => {
   const pkg = JSON.parse(await readFile(join(plugin, 'package.json'), 'utf8'));
   const manifest = JSON.parse(await readFile(join(plugin, '.codebuddy-plugin', 'plugin.json'), 'utf8'));
   const marketplace = JSON.parse(await readFile(join(repository, '.codebuddy-plugin', 'marketplace.json'), 'utf8'));
-  const build = await readFile(join(repository, '_build', 'package-marketplace.py'), 'utf8');
   const releaseReadme = await readFile(join(repository, 'README.md'), 'utf8');
   const pluginReadme = await readFile(join(plugin, 'README.md'), 'utf8');
-  assert.equal(pkg.version, '0.8.1');
-  assert.equal(manifest.version, '0.8.1');
-  assert.equal(marketplace.metadata.version, '0.8.1');
-  assert.equal(marketplace.plugins[0].version, '0.8.1');
-  assert.match(build, /ai-market-0\.8\.1\.zip/);
-  assert.match(releaseReadme, /发布版本：`0\.8\.1`/);
-  assert.match(pluginReadme, /\nVersion 0\.8\.1 /);
+  assert.equal(pkg.version, '0.9.0');
+  assert.equal(manifest.version, '0.9.0');
+  assert.equal(marketplace.version, '0.9.0');
+  assert.equal(Object.hasOwn(marketplace, 'metadata'), false);
+  assert.equal(marketplace.plugins[0].version, '0.9.0');
+  assert.match(releaseReadme, /发布版本：`0\.9\.0`/);
+  assert.match(releaseReadme, /plugin marketplace add/);
+  assert.match(releaseReadme, /plugin marketplace update/);
+  assert.doesNotMatch(releaseReadme, /从 ZIP 安装|ai-market-0\.9\.0\.zip/);
+  assert.match(pluginReadme, /\nVersion 0\.9\.0 /);
 });

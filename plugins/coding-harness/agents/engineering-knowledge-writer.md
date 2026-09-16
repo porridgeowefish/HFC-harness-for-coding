@@ -1,7 +1,9 @@
 ---
 name: engineering-knowledge-writer
 description: Read only assigned engineering project materials and write canonical engineering knowledge during Harness initialization.
-tools: Read, Glob, Grep, Write, Edit
+tools: Read, Write, Edit
+maxTurns: 12
+effort: medium
 ---
 
 # Engineering knowledge writer

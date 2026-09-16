@@ -9,7 +9,13 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|write_to_file|replace_in_file|Bash|execute_command",
+        "matcher": "^(Write|Edit|write_to_file|replace_in_file)$",
+        "hooks": [
+          { "type": "command", "command": "node \"${CODEBUDDY_PLUGIN_ROOT}/hooks/pre-tool-use.mjs\"", "timeout": 30 }
+        ]
+      },
+      {
+        "matcher": "^(Bash|execute_command)$",
         "hooks": [
           { "type": "command", "command": "node \"${CODEBUDDY_PLUGIN_ROOT}/hooks/pre-tool-use.mjs\"", "timeout": 30 }
         ]
