@@ -148,6 +148,10 @@ AI 和初始化器不得把上述路径加入 `.gitignore`、`.git/info/exclude`
 │   │   ├── 文件树.md
 │   │   ├── 业务入口.md
 │   │   ├── architecture/           # .puml 源文件 + 渲染 svg
+│   │   ├── api/                    # 稳定 API 的导航、语义与兼容边界；按需创建
+│   │   ├── data/                   # 稳定数据域、关系与约束；按需创建
+│   │   ├── integration/            # 外部系统、RPC、事件集成；按需创建
+│   │   ├── decisions/              # 已确认且可跨任务复用的项目级决策；按需创建
 │   │   └── modules/                # 工程模块说明，按需创建
 │   ├── function/                   # 长期业务功能知识
 │   │   ├── module.json             # 业务模块索引
@@ -227,10 +231,15 @@ docs/knowledge/
 │   ├── README.md                 # 数据总索引、权威 DDL/Migration 位置与变更原则
 │   ├── <数据域>.md                # 实体、表关系、字段语义、索引、约束与事实依据
 │   └── erd.puml / erd.svg        # 可版本管理的 ER 图源及默认供人阅读的渲染图
-└── integration/
+├── integration/
     ├── README.md                 # 外部系统、RPC、消息事件总索引
     └── <系统或事件域>.md          # 提供/消费方、Schema、认证、幂等、顺序与失败处理
+└── decisions/
+    ├── README.md                 # 项目级已确认决策索引
+    └── <决策主题>.md              # 决策、适用范围、影响、不采用方案与事实依据
 ```
+
+`decisions/` 只保存负责人确认、可跨任务复用且不属于业务、工程模块、API、数据或集成事实的项目级决策；它不保存聊天逐字记录、临时 Mock 或未确认假设。
 
 OpenAPI/IDL、Migration/DDL、受控 Schema、Topic/网关/适配器配置才是可执行事实的权威来源；Markdown 负责导航、语义解释、关系与兼容边界，并必须链接事实依据。workflow 的 `development-contract.md` 只记录本轮增量、负责方、使用方和验证方式，不能替代长期库。验收后由 `knowledge-update-review.md` 决定是否回写：已验收的 API、数据或集成契约变化必须更新对应长期条目；纯本轮临时 Mock、试验性实现或未确认方案不得写入。
 
@@ -522,7 +531,7 @@ AI 生成任务包后，向人汇总四项开工判断：
 
 本轮设计围绕正式需求单进行工程探索、确认必要决策并拆为可执行任务。设计产物只保留让执行者能做事的必要信息：本轮要改什么、关键约束是什么、任务如何独立完成和验证。它不是项目知识库的重复副本。
 
-验收后，本轮人类可读材料保留在 `docs/workflows/<task-id>/` 作为任务记录，但不进入后续任务的默认上下文。长期资产是否更新，先由独立 `knowledge-update-review.md` 逐项判定并经人审核；只有被批准、对未来任务仍有价值的内容，才收敛进长期知识：功能变化进 `docs/function/` 对应功能点，架构取舍与工程约束进 `docs/knowledge/`，已验收的 API、数据与跨系统契约变化分别进 `docs/knowledge/api/`、`data/`、`integration/`。
+验收后，本轮人类可读材料保留在 `docs/workflows/<task-id>/` 作为任务记录，但不进入后续任务的默认上下文。长期资产是否更新，先由独立 `knowledge-update-review.md` 逐项判定并经人审核；只有被批准、对未来任务仍有价值的内容，才收敛进长期知识：功能变化进 `docs/function/` 对应功能点，架构取舍与工程约束进 `docs/knowledge/`，已验收的 API、数据与跨系统契约变化分别进 `docs/knowledge/api/`、`data/`、`integration/`；负责人确认且无法归入前述类别的稳定项目级决策进 `docs/knowledge/decisions/`。
 
 ### 2.3 具体实现手段
 
@@ -684,7 +693,7 @@ code-reviewer 输出 BLOCKER 清单
 
 代码合并报告的职责是说明“本次代码是否可以合并”；长期知识更新审核单的职责是说明“本轮代码和设计改变了哪些长期事实、哪些必须更新、哪些无需更新及其依据”。两者读者、审核问题和失败后动作不同，**不得合并为同一份文件**。
 
-独立审核单固定落盘为 `docs/workflows/<task-id>/knowledge-update-review.md`，在独立代码评审通过后、MR 最终批准前生成。它必须逐项覆盖：`项目总览.md`、`文件树.md`、`业务入口.md`、`architecture/`、`modules/`、相关 `docs/function/` 功能点及 `.codebuddy/rules/`。每项只允许判定为：`需要更新`、`无需更新`、`待人裁定`；后两者均需附依据，存在任何`待人裁定`时不得进入最终 MR 审核。
+独立审核单固定落盘为 `docs/workflows/<task-id>/knowledge-update-review.md`，在独立代码评审通过后、MR 最终批准前生成。它必须逐项覆盖：`项目总览.md`、`文件树.md`、`业务入口.md`、`architecture/`、`modules/`、相关 `docs/function/` 功能点、`api/`、`data/`、`integration/`、`decisions/` 及 `.codebuddy/rules/`。每项只允许判定为：`需要更新`、`无需更新`、`待人裁定`；后两者均需附依据，存在任何`待人裁定`时不得进入最终 MR 审核。
 
 审核单必须给出每项“需要更新”的目标文件、更新草案、被替代内容、来源证据及保留理由。AI 先提交审核单，不得直接改写长期资产；负责人审核通过后，AI 才在同一 MR 分支写入已批准更新，并在审核单中记录实际改动路径与 Commit。`.codebuddy/rules/` 仅在形成跨任务、长期稳定且必须遵守的规约时允许更新；本轮局部实现细节不得升格为 Rules。
 

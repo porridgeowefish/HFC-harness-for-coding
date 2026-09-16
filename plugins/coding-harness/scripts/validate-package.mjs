@@ -24,7 +24,7 @@ async function walk(root) {
 export const PACKAGE_DIRECTORIES = Object.freeze([
   '.codebuddy-plugin/', 'agents/', 'bin/', 'commands/', 'hooks/', 'runtime/', 'schemas/', 'scripts/', 'skills/',
   ...['harness-orchestrator', 'independent-review', 'knowledge-update-review', 'requirement-publication', 'solution-design', 'task-implementation'].map((name) => `skills/${name}/`),
-  'templates/', 'templates/business/', 'templates/contracts/', 'templates/engineering/', 'templates/project/', 'templates/project/.codebuddy/', 'templates/project/.codebuddy/rules/',
+  'templates/', 'templates/business/', 'templates/contracts/', 'templates/decisions/', 'templates/engineering/', 'templates/shared/', 'templates/project/', 'templates/project/.codebuddy/', 'templates/project/.codebuddy/rules/',
   'templates/project/docs/', 'templates/project/docs/function/', 'templates/project/docs/knowledge/', 'templates/project/docs/knowledge/architecture/',
   'templates/project/docs/workflows/', 'templates/workflow/', 'tests/'
 ]);

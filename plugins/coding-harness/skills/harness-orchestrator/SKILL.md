@@ -17,11 +17,13 @@ description: 当用户说“接入 Harness”“初始化 AI 开发流程”“�
 | 查看进度、继续上次流程 | 读取当前 workflow state、`step`、`summary`、`next_action` 及其引用的 Markdown 产物；只执行 `next_action` 所代表的一件事，写入一次状态转换后停止 | 用户下一次明确调用才进入下一个节点 |
 | 评审、代码审核 | 为当前 MR 快照调用只读 `code-reviewer`；由主流程记录结果 | reviewer 不修改代码或状态 |
 | 出合并报告、收尾 | MR 合并后，基于 state 中的门禁、评审与 MR 事实填写该任务的 `merge-report.md`，再运行 `harness transition <workflow-id> '{"action":"record_merge_report","expectedRevision":<当前>,"by":"<负责人>","at":"<RFC3339>"}'` | 报告内容与 state 事实一致，不虚构未运行的门禁结果 |
-| 补建业务知识、工程模块说明 | 管理员确认分类后，使用 `knowledge-feature <业务模块> <功能点>` 或 `knowledge-module <工程模块>` | 复用已有分类；草案补全并审核后提交 Git，任务内修改遵循知识审核 |
+| 补建长期知识 | 管理员确认分类后，业务使用 `knowledge-feature <业务模块> <功能点>`，工程模块使用 `knowledge-module <工程模块>`，负责人确认的项目级决策使用 `knowledge-decision <决策主题>`；API、数据与集成使用 `knowledge-shared <api|data|integration> <主题>` | 先按事实语义分类；复用已有条目；草案补全并审核后提交 Git，任务内修改遵循知识审核 |
 
 如果用户意图、操作类型、workflow 标题或管理员确认缺失，说明缺少的最小事实并停止。所有阶段推进必须经 `harness transition`，且使用当前 revision；不以聊天记录替代落盘产物或审批。`start` 只创建任务、索引全量材料并停在 `source_materials`，后续调用才执行 `next_action`；每次自然语言调用最多写入一个 workflow 节点并执行一次状态转换。读取到 `next_action` 后，不得预先创建后续节点的正式内容。特别是需求阶段必须严格依序为 `source_materials` → `candidate_review` → `publish_requirement`：候选结论与正式需求均须等用户下一次明确确认，不能由一段模糊功能描述自动跳过。
 
 **设计到开发交接**：设计结论确认后先写 `development-contract.md`，再生成 `task-package.md`。共同开发契约是 API、公共接口、数据、跨任务集成及必要共享行为的唯一正文；任务包只引用它并登记每个任务负责/使用的契约 ID。所有开发任务必须读取同一份共同开发契约。若实现要求改变契约，回退设计阶段并重新确认任务包，不允许在单个开发任务中私自改写共同语义。
+
+**长期知识分类**：业务规则只写 `docs/function/`；工程模块事实只写 `docs/knowledge/modules/`；API、数据、RPC、事件与外部系统事实分别写 `docs/knowledge/api/`、`data/`、`integration/`，并以 OpenAPI/IDL、Migration/DDL、受控 Schema 或适配器配置为权威来源；负责人确认且可跨任务复用、却不属于上述类别的项目决策写 `docs/knowledge/decisions/`。未确认假设、临时 Mock 和聊天过程不写入长期知识。任何已验收长期事实的变更都必须在 `knowledge-update-review.md` 中留下分类结论。
 
 **初始化硬规则**：文件树是初始化的第一份知识产物和唯一阅读索引；其输入是全量可见项目文件扫描，绝不将 README、`docs/`、常见目录或扩展名作为材料位置前提。第一轮只写路径骨架（路径行不带套话）。`docs/knowledge/文件树.md` 仅由运行时写入：业务、工程和 Rules Agent 只提交其已阅读路径的事实用途，不直接修改树。运行时在所有知识事实完成后统一生成完成态，完成态不得保留空行、泛化描述或 `<...>`。主 Agent 依据实际树动态决定分区，不得把角色或分区写死成教程。不得在阅读文件树列出的项目文件之前写“核心约束”“启动入口”“gates”“harness-self”或其他未登记文档；不得跳过某个可读项目文件后声称已完成初始化。工程 Agent 写 `component.puml`，运行时从其内容生成 `component.svg`，SVG 默认供人阅读。除 workflow 外，初始化完成时所有规范长期文档必须是项目事实，不能含 `<...>` 占位。
 

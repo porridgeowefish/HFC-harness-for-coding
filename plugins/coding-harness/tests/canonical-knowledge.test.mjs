@@ -4,7 +4,7 @@ import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } fro
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { initializeProject } from '../runtime/onboarding.mjs';
-import { createBusinessFeature, createEngineeringModule } from '../runtime/knowledge.mjs';
+import { createBusinessFeature, createEngineeringModule, createProjectDecision, createSharedKnowledge } from '../runtime/knowledge.mjs';
 import { refreshFileTree, refreshWorkflowNavigation } from '../runtime/navigation.mjs';
 import { reviewedDraft } from './init-draft.mjs';
 import { initializeConfirmed } from './init-helpers.mjs';
@@ -26,6 +26,20 @@ const MODULE_FACTS = {
   compatibilityBoundary: '保持现有 HTTP 方法和响应字段兼容。',
   activationMechanism: '应用启动时注册路由和服务依赖。',
   easyMisjudgments: '路由注册不等于业务规则。',
+  evidence: ['CODEBUDDY.md']
+};
+const DECISION_FACTS = {
+  confirmedDecision: '接口兼容性通过显式版本字段演进，不以隐式字段猜测替代。',
+  scope: '适用于订单服务与其已登记调用方之间的稳定接口。',
+  impact: '新增字段必须保持旧调用方可读，弃用字段需完成消费者迁移。',
+  rejectedAlternatives: '不采用按调用方分叉接口，因为会扩大维护与联调成本。',
+  evidence: ['CODEBUDDY.md']
+};
+const API_FACTS = {
+  inventory: '订单查询接口由订单服务提供，供后台页面调用。',
+  requestAndResponse: '请求包含页码和筛选条件，响应返回授权订单分页结果。',
+  errorSemantics: '非法筛选返回可识别的参数错误，未授权返回权限错误。',
+  compatibility: '新增字段保持可选，弃用字段需先完成调用方迁移。',
   evidence: ['CODEBUDDY.md']
 };
 
@@ -55,7 +69,30 @@ test('knowledge creation requires the initialized canonical roots and leaves an 
   await writeFile(join(root, 'user.txt'), 'keep\n');
   await assert.rejects(() => createBusinessFeature(root, '订单', '查询'), /initialize the project first/);
   await assert.rejects(() => createEngineeringModule(root, '订单引擎'), /initialize the project first/);
+  await assert.rejects(() => createProjectDecision(root, '接口版本策略'), /initialize the project first/);
   assert.deepEqual(await readdir(root), ['user.txt']);
+});
+
+test('confirmed project decisions are created on demand with an index and evidence', async (t) => {
+  const root = await project(t);
+  const result = await createProjectDecision(root, '接口版本策略', DECISION_FACTS);
+  assert.equal(result.path, 'docs/knowledge/decisions/接口版本策略.md');
+  const decision = await readFile(join(root, result.path), 'utf8');
+  assert.match(decision, /## 已确认决策/);
+  assert.match(decision, /显式版本字段演进/);
+  const index = await readFile(join(root, 'docs/knowledge/decisions/README.md'), 'utf8');
+  assert.match(index, /\[接口版本策略\]\(接口版本策略\.md\)/);
+  await assert.rejects(() => createProjectDecision(root, '接口版本策略', DECISION_FACTS), /already exists/);
+});
+
+test('shared API knowledge is created on demand and remains linked to authority evidence', async (t) => {
+  const root = await project(t);
+  const result = await createSharedKnowledge(root, 'api', '订单查询', API_FACTS);
+  assert.equal(result.path, 'docs/knowledge/api/订单查询.md');
+  const text = await readFile(join(root, result.path), 'utf8');
+  assert.match(text, /## 版本与兼容/);
+  assert.match(text, /新增字段保持可选/);
+  assert.match(await readFile(join(root, 'docs/knowledge/api/README.md'), 'utf8'), /\[订单查询\]\(订单查询\.md\)/);
 });
 
 test('duplicate creation and corrupted indexes never overwrite user content or append duplicate rows', async (t) => {

@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { checklistStatus, confirmChecklistItem, initializeProject } from '../runtime/onboarding.mjs';
 import { doctorProject } from '../runtime/doctor.mjs';
 import { createWorkflow, transitionWorkflow } from '../runtime/state.mjs';
-import { createBusinessFeature, createEngineeringModule } from '../runtime/knowledge.mjs';
+import { createBusinessFeature, createEngineeringModule, createProjectDecision, createSharedKnowledge } from '../runtime/knowledge.mjs';
 
 const [command, ...args] = process.argv.slice(2);
 const project = resolve(process.cwd());
@@ -50,6 +50,10 @@ if (command === 'knowledge-feature') {
   console.log(JSON.stringify(await createBusinessFeature(project, args[0], args[1], await optionalJsonArgument('--facts')), null, 2));
 } else if (command === 'knowledge-module') {
   console.log(JSON.stringify(await createEngineeringModule(project, args[0], await optionalJsonArgument('--facts')), null, 2));
+} else if (command === 'knowledge-decision') {
+  console.log(JSON.stringify(await createProjectDecision(project, args[0], await optionalJsonArgument('--facts')), null, 2));
+} else if (command === 'knowledge-shared') {
+  console.log(JSON.stringify(await createSharedKnowledge(project, args[0], args[1], await optionalJsonArgument('--facts')), null, 2));
 } else if (command === 'init') {
   const knowledgeIndex = args.indexOf('--knowledge');
   const knowledgeDraft = knowledgeIndex >= 0 ? args[knowledgeIndex + 1] : null;
@@ -77,5 +81,5 @@ if (command === 'knowledge-feature') {
   if (!taskId || !requestJson) throw new Error('workflow id and transition request JSON are required');
   console.log(JSON.stringify(await transitionWorkflow(project, taskId, JSON.parse(requestJson)), null, 2));
 } else {
-  throw new Error('usage: harness <init [--phase prepare|finalize] [--apply --knowledge <draft.json>]|checklist-status|checklist-confirm <id> <actor>|doctor|start <operation> <title>|transition <workflow-id> <request-json>|knowledge-feature <module> <feature> --facts <facts.json>|knowledge-module <module> --facts <facts.json>');
+  throw new Error('usage: harness <init [--phase prepare|finalize] [--apply --knowledge <draft.json>]|checklist-status|checklist-confirm <id> <actor>|doctor|start <operation> <title>|transition <workflow-id> <request-json>|knowledge-feature <module> <feature> --facts <facts.json>|knowledge-module <module> --facts <facts.json>|knowledge-decision <topic> --facts <facts.json>|knowledge-shared <api|data|integration> <topic> --facts <facts.json>');
 }

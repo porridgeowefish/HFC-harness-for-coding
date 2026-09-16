@@ -9,10 +9,14 @@
 | `business/功能描述.md` | `docs/function/<业务模块>/<功能点>/功能描述.md` | 确认业务分类后创建功能点 |
 | `business/功能演变历史.md` | `docs/function/<业务模块>/<功能点>/功能演变历史.md` | 同上 |
 | `engineering/模块说明.md` | `docs/knowledge/modules/<工程模块>.md` | 确实需要工程模块说明时 |
+| `decisions/决策说明.md` | `docs/knowledge/decisions/<决策主题>.md` | 负责人确认、可跨任务复用且无其他事实归属时 |
+| `shared/api.md` | `docs/knowledge/api/<领域或服务>.md` | 已验收的稳定接口语义需要跨任务复用时 |
+| `shared/data.md` | `docs/knowledge/data/<数据域>.md` | 已验收的稳定数据域需要跨任务复用时 |
+| `shared/integration.md` | `docs/knowledge/integration/<系统或事件域>.md` | 已验收的稳定外部集成需要跨任务复用时 |
 | `contracts/` | 按需装配进 `docs/workflows/<workflow-id>/development-contract.md` | 设计结论确认后、任务拆分前 |
 | `workflow/` | `docs/workflows/<workflow-id>/`，十一份固定文件 | 创建一轮 workflow |
 
-`<业务模块>`、`<功能点>`、`<工程模块>` 表示运行时确认的实际名称，不是要创建的字面目录。默认不创建空业务模块、空功能点或空工程说明目录。
+`<业务模块>`、`<功能点>`、`<工程模块>`、`<决策主题>` 表示运行时确认的实际名称，不是要创建的字面目录。默认不创建空业务模块、空功能点、空工程说明或空决策目录。
 
 以下内容由运行时生成，不维护重复模板：
 
@@ -27,4 +31,4 @@
 
 本地证据确实需要文件存储时，使用 `.codebuddy/workflows/<workflow-id>/evidence/`；外部证据可保留链接。没有本地证据时不创建空 evidence 目录。
 
-业务、工程、workflow 与五类共同开发契约模板均声明固定 Markdown 结构和允许的 `<...>` 字段；名称与索引由运行时填写，正文由分区 subagent 根据真实项目材料补全。完成态必须通过结构 allowlist、路径覆盖和无占位校验；八项 checklist 确认完成后才可应用，随后由管理员提交 Git。使用 `knowledge-feature` 或 `knowledge-module` 时，Skill 先收集结构化事实（必要时以 CLI 的 `--facts <facts.json>` 作为排障兜底），运行时拒绝泛化占位并验证事实依据。十份流程正文模板逐字遵循技术设计第 4–7 节；workflow README 是第 2 节规定的任务导航。
+业务、工程、决策、workflow 与五类共同开发契约模板均声明固定 Markdown 结构和允许的 `<...>` 字段；名称与索引由运行时填写，正文由分区 subagent 根据真实项目材料补全。完成态必须通过结构 allowlist、路径覆盖和无占位校验；八项 checklist 确认完成后才可应用，随后由管理员提交 Git。使用 `knowledge-feature`、`knowledge-module` 或 `knowledge-decision` 时，Skill 先收集结构化事实（必要时以 CLI 的 `--facts <facts.json>` 作为排障兜底），运行时拒绝泛化占位并验证事实依据。十份流程正文模板逐字遵循技术设计第 4–7 节；workflow README 是第 2 节规定的任务导航。

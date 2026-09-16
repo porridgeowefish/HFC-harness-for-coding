@@ -121,6 +121,9 @@ async function markdownContractChecks(root) {
     }
   }
   await visit('docs/knowledge/modules', (name) => name.endsWith('.md'));
+  for (const domain of ['api', 'data', 'integration', 'decisions']) {
+    await visit(`docs/knowledge/${domain}`, (name) => name.endsWith('.md') && name !== 'README.md');
+  }
   async function visitFunctions(directory, prefix = 'docs/function') {
     if (!await exists(directory)) return;
     for (const entry of await readdir(directory, { withFileTypes: true })) {

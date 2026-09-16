@@ -220,3 +220,131 @@ export async function createEngineeringModule(projectRoot, name, facts = null) {
     throw error;
   }
 }
+
+function indexCell(value) {
+  return String(value).replaceAll('|', '\\|').replaceAll(/[\r\n]+/g, ' ').trim();
+}
+
+function decisionIndexWith(text, name, scope) {
+  const header = ['# 项目级决策索引', '', '仅收录负责人确认、可跨任务复用的项目级决策；聊天过程、临时 Mock 与未确认假设不进入本索引。', '', '## 决策条目', '', '| 决策主题 | 适用范围 | 决策文档 |', '| --- | --- | --- |'];
+  if (text === null) return [...header, `| ${indexCell(name)} | ${indexCell(scope)} | [${indexCell(name)}](${indexCell(name)}.md) |`, ''].join('\n');
+  const lines = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trimEnd().split('\n');
+  if (lines.length < header.length || header.some((line, index) => lines[index] !== line)) throw new Error('invalid project decision index');
+  if (lines.slice(header.length).some((line) => !/^\|\s*[^|]+\s*\|\s*[^|]+\s*\|\s*\[[^\]]+\]\([^)]*\.md\)\s*\|$/.test(line))) throw new Error('invalid project decision index');
+  return [...lines, `| ${indexCell(name)} | ${indexCell(scope)} | [${indexCell(name)}](${indexCell(name)}.md) |`, ''].join('\n');
+}
+
+export async function createProjectDecision(projectRoot, name, facts = null) {
+  const root = resolve(projectRoot); segment(name);
+  const knowledgeRoot = childPath(root, 'docs', 'knowledge');
+  const targetDirectory = childPath(root, 'docs', 'knowledge', 'decisions');
+  const target = childPath(root, 'docs', 'knowledge', 'decisions', `${name}.md`);
+  const indexPath = childPath(root, 'docs', 'knowledge', 'decisions', 'README.md');
+  await rejectSymlinkAncestors(root, 'docs', 'knowledge', 'decisions', `${name}.md`);
+  await requireDirectory(knowledgeRoot, 'canonical engineering knowledge root');
+  if (await stat(target)) throw new Error('project decision already exists');
+  const confirmedFacts = factSet(facts, ['confirmedDecision', 'scope', 'impact', 'rejectedAlternatives', 'evidence'], 'project decision');
+  for (const evidencePath of confirmedFacts.evidence) {
+    const info = await stat(childPath(root, ...evidencePath.replaceAll('\\', '/').split('/')));
+    if (!info || info.isSymbolicLink()) throw new Error(`project decision evidence path does not exist in the project: ${evidencePath}`);
+  }
+  const [template, indexOriginal] = await Promise.all([
+    readFile(join(templates, 'decisions', '决策说明.md'), 'utf8'), readOptional(indexPath)
+  ]);
+  const directoryExisted = Boolean(await stat(targetDirectory));
+  const document = fillTemplate(template, {
+    'decision-topic': name,
+    'confirmed-decision': confirmedFacts.confirmedDecision,
+    'decision-scope': confirmedFacts.scope,
+    'decision-impact': confirmedFacts.impact,
+    'rejected-alternatives-and-rationale': confirmedFacts.rejectedAlternatives,
+    'fact-paths': evidenceMarkdown(confirmedFacts.evidence)
+  });
+  const documentErrors = validateCompletedDocument(`docs/knowledge/decisions/${name}.md`, document);
+  if (documentErrors.length) throw new Error(`project decision facts do not satisfy the Markdown contract: ${documentErrors.join('; ')}`);
+  const index = decisionIndexWith(indexOriginal, name, confirmedFacts.scope);
+  const staging = temporary(target);
+  let targetCommitted = false;
+  let indexCommitted = false;
+  try {
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(staging, document, { flag: 'wx' });
+    await renameWithRetry(staging, target); targetCommitted = true;
+    await atomicText(indexPath, index); indexCommitted = true;
+    await refreshFileTree(root);
+    return { path: relative(root, target).replaceAll('\\', '/') };
+  } catch (error) {
+    await unlink(staging).catch(() => {});
+    if (targetCommitted) await unlink(target).catch(() => {});
+    if (indexCommitted) await restore(indexPath, indexOriginal);
+    if (!directoryExisted) await rmdir(targetDirectory).catch((cleanupError) => { if (!['ENOENT', 'ENOTEMPTY'].includes(cleanupError.code)) throw cleanupError; });
+    throw error;
+  }
+}
+
+const SHARED_KNOWLEDGE = Object.freeze({
+  api: {
+    title: 'API 总索引', authority: '权威来源：OpenAPI/IDL、网关或服务路由配置。Markdown 解释语义与兼容边界，不取代可执行契约。',
+    required: ['inventory', 'requestAndResponse', 'errorSemantics', 'compatibility', 'evidence'], template: 'api.md',
+    replacements: (facts) => ({ 'api-inventory': facts.inventory, 'request-and-response': facts.requestAndResponse, 'error-semantics': facts.errorSemantics, compatibility: facts.compatibility })
+  },
+  data: {
+    title: '数据总索引', authority: '权威来源：Migration/DDL、受控 Schema 与实体映射。Markdown 解释数据语义与关系，不取代可执行模型。',
+    required: ['entitiesAndRelations', 'fieldSemantics', 'indexesAndConstraints', 'compatibility', 'evidence'], template: 'data.md',
+    replacements: (facts) => ({ 'entities-and-relations': facts.entitiesAndRelations, 'field-semantics': facts.fieldSemantics, 'indexes-and-constraints': facts.indexesAndConstraints, compatibility: facts.compatibility })
+  },
+  integration: {
+    title: '集成总索引', authority: '权威来源：RPC/IDL、消息 Schema、Topic 配置、外部适配器与供应商协议。Markdown 解释集成语义，不取代受控配置。',
+    required: ['providersAndConsumers', 'schemaAndAuthentication', 'idempotencyAndOrdering', 'failureHandling', 'evidence'], template: 'integration.md',
+    replacements: (facts) => ({ 'providers-and-consumers': facts.providersAndConsumers, 'schema-and-authentication': facts.schemaAndAuthentication, 'idempotency-and-ordering': facts.idempotencyAndOrdering, 'failure-handling': facts.failureHandling })
+  }
+});
+
+function sharedIndexWith(text, configuration, name) {
+  const header = [`# ${configuration.title}`, '', configuration.authority, '', '## 条目', '', '| 名称 | 知识文档 |', '| --- | --- |'];
+  if (text === null) return [...header, `| ${indexCell(name)} | [${indexCell(name)}](${indexCell(name)}.md) |`, ''].join('\n');
+  const lines = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trimEnd().split('\n');
+  if (lines.length < header.length || header.some((line, index) => lines[index] !== line) || lines.slice(header.length).some((line) => !/^\|\s*[^|]+\s*\|\s*\[[^\]]+\]\([^)]*\.md\)\s*\|$/.test(line))) throw new Error('invalid shared knowledge index');
+  return [...lines, `| ${indexCell(name)} | [${indexCell(name)}](${indexCell(name)}.md) |`, ''].join('\n');
+}
+
+export async function createSharedKnowledge(projectRoot, domain, name, facts = null) {
+  const root = resolve(projectRoot); segment(name);
+  const configuration = SHARED_KNOWLEDGE[domain];
+  if (!configuration) throw new Error('shared knowledge domain must be api, data or integration');
+  const knowledgeRoot = childPath(root, 'docs', 'knowledge');
+  const targetDirectory = childPath(root, 'docs', 'knowledge', domain);
+  const target = childPath(root, 'docs', 'knowledge', domain, `${name}.md`);
+  const indexPath = childPath(root, 'docs', 'knowledge', domain, 'README.md');
+  await rejectSymlinkAncestors(root, 'docs', 'knowledge', domain, `${name}.md`);
+  await requireDirectory(knowledgeRoot, 'canonical shared knowledge root');
+  if (await stat(target)) throw new Error('shared knowledge already exists');
+  const confirmedFacts = factSet(facts, configuration.required, `shared ${domain}`);
+  for (const evidencePath of confirmedFacts.evidence) {
+    const info = await stat(childPath(root, ...evidencePath.replaceAll('\\', '/').split('/')));
+    if (!info || info.isSymbolicLink()) throw new Error(`shared ${domain} evidence path does not exist in the project: ${evidencePath}`);
+  }
+  const [template, indexOriginal] = await Promise.all([readFile(join(templates, 'shared', configuration.template), 'utf8'), readOptional(indexPath)]);
+  const directoryExisted = Boolean(await stat(targetDirectory));
+  const document = fillTemplate(template, { 'shared-topic': name, ...configuration.replacements(confirmedFacts), 'fact-paths': evidenceMarkdown(confirmedFacts.evidence) });
+  const documentErrors = validateCompletedDocument(`docs/knowledge/${domain}/${name}.md`, document);
+  if (documentErrors.length) throw new Error(`shared ${domain} facts do not satisfy the Markdown contract: ${documentErrors.join('; ')}`);
+  const index = sharedIndexWith(indexOriginal, configuration, name);
+  const staging = temporary(target);
+  let targetCommitted = false;
+  let indexCommitted = false;
+  try {
+    await mkdir(targetDirectory, { recursive: true });
+    await writeFile(staging, document, { flag: 'wx' });
+    await renameWithRetry(staging, target); targetCommitted = true;
+    await atomicText(indexPath, index); indexCommitted = true;
+    await refreshFileTree(root);
+    return { path: relative(root, target).replaceAll('\\', '/') };
+  } catch (error) {
+    await unlink(staging).catch(() => {});
+    if (targetCommitted) await unlink(target).catch(() => {});
+    if (indexCommitted) await restore(indexPath, indexOriginal);
+    if (!directoryExisted) await rmdir(targetDirectory).catch((cleanupError) => { if (!['ENOENT', 'ENOTEMPTY'].includes(cleanupError.code)) throw cleanupError; });
+    throw error;
+  }
+}

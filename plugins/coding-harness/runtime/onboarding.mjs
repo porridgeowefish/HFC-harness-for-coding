@@ -654,15 +654,46 @@ async function applyKnowledgeDraft(root, draft, { allowPrepared = false, prepare
       '## 事实依据', '', evidenceLines(module.evidence)
     ].join('\n')]);
   }
+  const ruleBaselines = {
+    'architecture.md': {
+      mustFollow: ['修改模块边界或跨模块依赖前，必须读取架构图、相关工程模块说明与已确认项目级决策；不得在单个任务中私自改变稳定边界。'],
+      verification: ['验证依赖方向、跨模块调用与相关集成行为仍符合已确认架构。'],
+      updateThreshold: ['已确认的新模块边界、跨模块职责或稳定架构取舍，更新工程模块说明或 docs/knowledge/decisions/。']
+    },
+    'engineering.md': {
+      mustFollow: ['负责人确认且可跨任务复用的工程事实必须按类别回写长期知识，不得只保留在聊天记录或单个 workflow。'],
+      verification: ['验证工程模块说明中的入口、机制和兼容边界可由事实依据定位。'],
+      updateThreshold: ['工程模块职责、入口、运行机制或易误判点发生长期变化时，更新 docs/knowledge/modules/ 或 docs/knowledge/decisions/。']
+    },
+    'testing.md': {
+      mustFollow: ['涉及 API、数据或集成的变更必须使用相应契约、迁移或消费者验证；不得以单元测试替代兼容性验证。'],
+      verification: ['记录本次执行的自动化测试、契约验证、迁移验证或消费者验证及其结果。'],
+      updateThreshold: ['已确认的测试边界、验证入口或质量约束可跨任务复用时，更新对应工程模块说明或项目级决策。']
+    },
+    'api-and-data.md': {
+      mustFollow: [
+        'API、数据、RPC、事件或外部系统变更前，必须读取对应共享开发知识与权威来源。',
+        '不得只改 Markdown；接口以 OpenAPI/IDL，数据以 Migration/DDL，集成以受控 Schema 或适配器配置为准。'
+      ],
+      verification: ['验证 OpenAPI/IDL、Migration/DDL、受控 Schema 或适配器配置与实现一致，并执行适用的兼容、迁移或消费者验证。'],
+      updateThreshold: ['已验收的 API、数据或集成契约变更，必须更新 docs/knowledge/api/、data/ 或 integration/ 的对应条目及索引；实体关系变化同时更新 ER 图。']
+    },
+    'commit-and-mr.md': {
+      mustFollow: ['负责人确认且可跨任务复用的事实不得只留在聊天记录或 workflow；合并前必须经 knowledge-update-review.md 分类并回写正确长期位置。'],
+      verification: ['MR 必须列出每项长期知识的需要更新、无需更新或待人裁定结论及证据。'],
+      updateThreshold: ['业务、工程、API、数据、集成或项目决策出现已确认且长期有效的变化时，分别更新 docs/function/、docs/knowledge/modules/、api/、data/、integration/ 或 decisions/。']
+    }
+  };
   for (const rule of RULE_FILES) {
     const adjustment = draft.ruleAdjustments[rule];
+    const baseline = ruleBaselines[rule];
     const title = ({ 'architecture.md': '架构规则', 'engineering.md': '工程规则', 'testing.md': '测试规则', 'api-and-data.md': 'API 与数据规则', 'commit-and-mr.md': '提交与 MR 规则' })[rule];
     const ruleText = [
       `适用场景: ${adjustment.scope}`, '', `# ${title}`, '',
-      '## 必须遵守', '', markdownList(adjustment.mustFollow), '',
+      '## 必须遵守', '', markdownList([...baseline.mustFollow, ...adjustment.mustFollow]), '',
       '## 相关知识入口', '', adjustment.knowledgePaths.map((path) => `- [${path}](../../${path})`).join('\n'), '',
-      '## 验证方式', '', markdownList(adjustment.verification), '',
-      '## 更新门槛', '', markdownList(adjustment.updateThreshold)
+      '## 验证方式', '', markdownList([...baseline.verification, ...adjustment.verification]), '',
+      '## 更新门槛', '', markdownList([...baseline.updateThreshold, ...adjustment.updateThreshold])
     ].join('\n');
     writes.push([`.codebuddy/rules/${rule}`, ruleText]);
   }

@@ -40,8 +40,8 @@ async function inventory(root, prefix = '') {
 test('every template folder is accounted for, including empty folders', async () => {
   const entries = await inventory(join(plugin, 'templates'));
   assert.deepEqual(entries.filter((p) => p.endsWith('/')), [
-    'business/', 'contracts/', 'engineering/', 'project/', 'project/.codebuddy/', 'project/.codebuddy/rules/',
-    'project/docs/', 'project/docs/function/', 'project/docs/knowledge/', 'project/docs/knowledge/architecture/', 'project/docs/workflows/', 'workflow/'
+    'business/', 'contracts/', 'decisions/', 'engineering/', 'project/', 'project/.codebuddy/', 'project/.codebuddy/rules/',
+    'project/docs/', 'project/docs/function/', 'project/docs/knowledge/', 'project/docs/knowledge/architecture/', 'project/docs/workflows/', 'shared/', 'workflow/'
   ]);
 });
 test('fresh project and on-demand knowledge match the documented destinations', async (t) => {

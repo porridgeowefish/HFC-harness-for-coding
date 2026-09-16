@@ -15,7 +15,11 @@ export const FORBIDDEN_LEGACY_PATHS = Object.freeze([
 ]);
 
 export const KNOWLEDGE_ROOT_FILES = Object.freeze(['项目总览.md', '文件树.md', '业务入口.md']);
-export const KNOWLEDGE_ROOT_DIRECTORIES = Object.freeze(['architecture', 'modules']);
+// These are long-lived knowledge domains.  They are deliberately allowed, not
+// eagerly created: an empty API/data/integration directory is not knowledge.
+export const KNOWLEDGE_ROOT_DIRECTORIES = Object.freeze([
+  'architecture', 'api', 'data', 'integration', 'decisions', 'modules'
+]);
 
 export const CHECKLIST_IDS = Object.freeze([
   'context_sources', 'integration_boundaries', 'integration_access',

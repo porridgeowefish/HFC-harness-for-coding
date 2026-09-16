@@ -2,11 +2,11 @@
 
 ## 阅读顺序与上下文边界
 
-进入任务前读取本文件、匹配的 `.codebuddy/rules/` 与相关 `docs/knowledge/`、`docs/function/` 导航。初始化和陌生项目探索必须按此顺序读取：`docs/knowledge/文件树.md` → 已有项目文档 → 文件树中列出的可读项目文件 → `项目总览.md` → `业务入口.md` → 架构图 → 工程模块 → `docs/function/`。不得跳过文件树直接臆测细节，或创建未登记的知识文档。工作流事实仅位于 `docs/workflows/任务目录/`；机器状态仅由运行时写入 `.codebuddy/workflows/任务目录/state.json`。
+进入任务前读取本文件、匹配的 `.codebuddy/rules/` 与相关 `docs/knowledge/`、`docs/function/` 导航。初始化和陌生项目探索必须按此顺序读取：`docs/knowledge/文件树.md` → 已有项目文档 → 文件树中列出的可读项目文件 → `项目总览.md` → `业务入口.md` → 架构图 → 按任务读取共享知识库（`api/`、`data/`、`integration/`）与已确认决策 → 工程模块 → `docs/function/`。不得跳过文件树直接臆测细节，或创建未登记的知识文档。工作流事实仅位于 `docs/workflows/任务目录/`；机器状态仅由运行时写入 `.codebuddy/workflows/任务目录/state.json`。
 
 ## Rules 装配索引
 
-Rules 按操作强制装配：模块或重构读取 architecture 与 engineering；API、数据或持久化读取 architecture 与 api-and-data；测试读取 testing；提交、MR 或报告读取 commit-and-mr；陌生代码只读探索读取 architecture 与对应工程导航。Rules 只保存执行约束和知识入口，不复制业务事实。
+Rules 按操作强制装配：模块或重构读取 architecture 与 engineering；API、数据、RPC、事件、外部系统或持久化读取 architecture 与 api-and-data；测试读取 testing；提交、MR 或报告读取 commit-and-mr；陌生代码只读探索读取 architecture 与对应工程导航。Rules 只保存执行约束和知识入口，不复制业务事实。可跨任务复用的已确认事实必须分类回写长期知识，不得只留在聊天或 workflow。
 
 ## 全局行为规则
 

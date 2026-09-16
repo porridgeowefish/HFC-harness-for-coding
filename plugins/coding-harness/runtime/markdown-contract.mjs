@@ -39,8 +39,8 @@ const CONTRACTS = Object.freeze({
     placeholders: [],
     strictBody: true,
     staticBody: [
-      '进入任务前读取本文件、匹配的 `.codebuddy/rules/` 与相关 `docs/knowledge/`、`docs/function/` 导航。初始化和陌生项目探索必须按此顺序读取：`docs/knowledge/文件树.md` → 已有项目文档 → 文件树中列出的可读项目文件 → `项目总览.md` → `业务入口.md` → 架构图 → 工程模块 → `docs/function/`。不得跳过文件树直接臆测细节，或创建未登记的知识文档。工作流事实仅位于 `docs/workflows/任务目录/`；机器状态仅由运行时写入 `.codebuddy/workflows/任务目录/state.json`。',
-      'Rules 按操作强制装配：模块或重构读取 architecture 与 engineering；API、数据或持久化读取 architecture 与 api-and-data；测试读取 testing；提交、MR 或报告读取 commit-and-mr；陌生代码只读探索读取 architecture 与对应工程导航。Rules 只保存执行约束和知识入口，不复制业务事实。',
+      '进入任务前读取本文件、匹配的 `.codebuddy/rules/` 与相关 `docs/knowledge/`、`docs/function/` 导航。初始化和陌生项目探索必须按此顺序读取：`docs/knowledge/文件树.md` → 已有项目文档 → 文件树中列出的可读项目文件 → `项目总览.md` → `业务入口.md` → 架构图 → 按任务读取共享知识库（`api/`、`data/`、`integration/`）与已确认决策 → 工程模块 → `docs/function/`。不得跳过文件树直接臆测细节，或创建未登记的知识文档。工作流事实仅位于 `docs/workflows/任务目录/`；机器状态仅由运行时写入 `.codebuddy/workflows/任务目录/state.json`。',
+      'Rules 按操作强制装配：模块或重构读取 architecture 与 engineering；API、数据、RPC、事件、外部系统或持久化读取 architecture 与 api-and-data；测试读取 testing；提交、MR 或报告读取 commit-and-mr；陌生代码只读探索读取 architecture 与对应工程导航。Rules 只保存执行约束和知识入口，不复制业务事实。可跨任务复用的已确认事实必须分类回写长期知识，不得只留在聊天或 workflow。',
       '1. 不臆测。不隐藏困惑。暴露权衡取舍。',
       '2. 用最少的代码解决问题。不写投机性代码。',
       '3. 只动必须动的。只清理自己留下的。',
@@ -79,6 +79,15 @@ const CONTRACTS = Object.freeze({
     placeholders: ['<engineering-module-name>', '<module-purpose>', '<module-entrypoints>', '<module-components>', '<module-flow>', '<cross-component-relationships>', '<compatibility-boundaries>', '<activation-mechanism>', '<non-obvious-facts-and-source-references>', '<fact-paths>'],
     strictBody: true
   },
+  'templates/decisions/决策说明.md': {
+    title: '<decision-topic>',
+    headings: ['<decision-topic>', '已确认决策', '适用范围', '影响', '不采用的方案与原因', '事实依据'],
+    placeholders: ['<decision-topic>', '<confirmed-decision>', '<decision-scope>', '<decision-impact>', '<rejected-alternatives-and-rationale>', '<fact-paths>'],
+    strictBody: true
+  },
+  'templates/shared/api.md': { title: '<shared-topic>', headings: ['<shared-topic>', '接口清单', '请求与响应', '错误语义', '版本与兼容', '事实依据'], placeholders: ['<shared-topic>', '<api-inventory>', '<request-and-response>', '<error-semantics>', '<compatibility>', '<fact-paths>'], strictBody: true },
+  'templates/shared/data.md': { title: '<shared-topic>', headings: ['<shared-topic>', '实体与表关系', '字段语义', '索引与约束', '变更与兼容', '事实依据'], placeholders: ['<shared-topic>', '<entities-and-relations>', '<field-semantics>', '<indexes-and-constraints>', '<compatibility>', '<fact-paths>'], strictBody: true },
+  'templates/shared/integration.md': { title: '<shared-topic>', headings: ['<shared-topic>', '提供方与消费方', 'Schema 与认证', '幂等与顺序', '失败处理', '事实依据'], placeholders: ['<shared-topic>', '<providers-and-consumers>', '<schema-and-authentication>', '<idempotency-and-ordering>', '<failure-handling>', '<fact-paths>'], strictBody: true },
   'templates/business/功能描述.md': {
     title: '<feature-name>',
     headings: ['<feature-name>', '当前功能', '业务规则', '边界', '主要流程', '事实依据'],
@@ -202,6 +211,10 @@ const STATIC_HEADING_LEVELS = Object.freeze({
   'templates/project/docs/knowledge/文件树.md': [1],
   'templates/project/docs/knowledge/业务入口.md': [1],
   'templates/engineering/模块说明.md': [1, 2, 2, 2, 2, 2, 2, 2, 2, 2],
+  'templates/decisions/决策说明.md': [1, 2, 2, 2, 2, 2],
+  'templates/shared/api.md': [1, 2, 2, 2, 2, 2],
+  'templates/shared/data.md': [1, 2, 2, 2, 2, 2],
+  'templates/shared/integration.md': [1, 2, 2, 2, 2, 2],
   'templates/business/功能描述.md': [1, 2, 2, 2, 2, 2],
   'templates/business/功能演变历史.md': [1, 2],
   'templates/project/.codebuddy/rules/architecture.md': [1, 2, 2, 2, 2],
@@ -595,7 +608,11 @@ export function validateCompletedDocument(relativePath, text, { expectedPaths = 
   const workflowMatch = normalized.match(/^docs\/workflows\/[^/]+\/([^/]+)$/);
   const templatePath = normalized.startsWith('templates/') ? normalized :
     normalized === 'CODEBUDDY.md' ? 'templates/project/CODEBUDDY.md' :
-      normalized === 'docs/workflows/README.md' ? 'templates/project/docs/workflows/README.md' :
+    normalized === 'docs/workflows/README.md' ? 'templates/project/docs/workflows/README.md' :
+    normalized.startsWith('docs/knowledge/decisions/') ? 'templates/decisions/决策说明.md' :
+    normalized.startsWith('docs/knowledge/api/') && !normalized.endsWith('/README.md') ? 'templates/shared/api.md' :
+    normalized.startsWith('docs/knowledge/data/') && !normalized.endsWith('/README.md') ? 'templates/shared/data.md' :
+    normalized.startsWith('docs/knowledge/integration/') && !normalized.endsWith('/README.md') ? 'templates/shared/integration.md' :
     normalized.startsWith('docs/knowledge/') ? `templates/project/${normalized}` :
       normalized.startsWith('.codebuddy/rules/') ? `templates/project/${normalized}` :
         workflowMatch ? `templates/workflow/${workflowMatch[1]}` : normalized;

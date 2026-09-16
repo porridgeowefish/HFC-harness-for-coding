@@ -169,6 +169,18 @@ test('prepare writes only the path skeleton and finalize writes the fact-filled 
   assert.match(await readFile(join(root, '.codebuddy/rules/architecture.md'), 'utf8'), /## 必须遵守/);
 });
 
+test('generated API/data and MR Rules retain mandatory knowledge-update obligations', async (t) => {
+  const root = await scratch(t);
+  await writeFile(join(root, 'main.go'), 'package main\n', 'utf8');
+  await initializeConfirmed(root, structuredClone(VALID_DRAFT));
+  const apiAndData = await readFile(join(root, '.codebuddy/rules/api-and-data.md'), 'utf8');
+  const commitAndMr = await readFile(join(root, '.codebuddy/rules/commit-and-mr.md'), 'utf8');
+  assert.match(apiAndData, /API、数据、RPC、事件或外部系统变更/);
+  assert.match(apiAndData, /OpenAPI\/IDL、Migration\/DDL、受控 Schema 或适配器配置/);
+  assert.match(commitAndMr, /负责人确认且可跨任务复用的事实不得只留在聊天记录或 workflow/);
+  assert.match(commitAndMr, /knowledge-update-review\.md/);
+});
+
 test('finalize accepts valid knowledge owner backfills made after the path skeleton', async (t) => {
   const root = await scratch(t);
   await writeFile(join(root, 'main.go'), 'package main\n', 'utf8');
