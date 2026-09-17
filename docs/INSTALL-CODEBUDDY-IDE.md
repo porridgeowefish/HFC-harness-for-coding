@@ -7,7 +7,7 @@
 Desktop：
 
 ```text
-/plugin marketplace add <marketplace-git-url>
+/plugin marketplace add https://github.com/porridgeowefish/HFC-harness-for-coding.git
 /plugin install coding-harness@ai-market
 /reload-plugins
 ```
@@ -15,7 +15,7 @@ Desktop：
 CLI：
 
 ```powershell
-codebuddy plugin marketplace add <marketplace-git-url> --name ai-market
+codebuddy plugin marketplace add https://github.com/porridgeowefish/HFC-harness-for-coding.git --name ai-market
 codebuddy plugin install coding-harness@ai-market --scope user
 codebuddy plugin list --json
 ```
