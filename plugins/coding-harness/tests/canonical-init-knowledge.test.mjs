@@ -25,8 +25,14 @@ const VALID_DRAFT = {
     { module: '订单', features: [{ name: '下单', currentStatus: '当前有效', currentCapability: '用户提交订单并落库', businessRules: '订单提交必须通过服务层校验', boundaries: '仅覆盖订单创建，不包含售后', mainFlow: '请求进入 handler 后调用 service 并写入存储', engineeringEntrypoints: ['main.go'], evidence: ['main.go'] }] }
   ],
   engineeringModules: [
-    { name: '路由注册', modulePosition: '统一暴露 HTTP 路由并连接业务处理器', directoryAndEntrypoints: 'main.go；main.go', coreComponents: '路由器、请求处理器和服务注入', mainFlow: '启动时创建路由器并注册订单端点', crossComponentRelations: '连接 HTTP 接入层与订单服务', compatibilityBoundary: '保持现有路由前缀和请求方法兼容', activationMechanism: '应用启动时完成注册', easyMisjudgments: '路由注册入口不是业务规则本身', evidence: ['main.go'] }
+    { name: '路由注册', boundaryType: 'runtime-component', ownedPaths: ['main.go'], modulePosition: '统一暴露 HTTP 路由并连接业务处理器', directoryAndEntrypoints: 'main.go；main.go', coreComponents: '路由器、请求处理器和服务注入', mainFlow: '启动时创建路由器并注册订单端点', crossComponentRelations: '连接 HTTP 接入层与订单服务', compatibilityBoundary: '保持现有路由前缀和请求方法兼容', activationMechanism: '应用启动时完成注册', easyMisjudgments: '路由注册入口不是业务规则本身', evidence: ['main.go'] }
   ],
+  sharedKnowledge: {
+    api: [{ name: '订单 HTTP API', inventory: 'POST /orders 创建订单', requestAndResponse: '请求包含订单信息，成功返回订单标识', errorSemantics: '校验失败返回 400', compatibility: '保持 POST /orders 路径与现有字段语义', evidence: ['main.go'] }],
+    data: [{ name: '订单数据', entitiesAndRelations: '订单是核心实体', fieldSemantics: '订单标识唯一定位订单', indexesAndConstraints: '订单标识唯一', compatibility: '新字段需保持旧数据可读', evidence: ['main.go'] }],
+    integration: [{ name: '订单服务调用', providersAndConsumers: '路由层调用订单服务', schemaAndAuthentication: '进程内调用，无额外认证', idempotencyAndOrdering: '由请求标识保证幂等', failureHandling: '服务错误转换为 HTTP 错误', evidence: ['main.go'] }]
+  },
+  decisions: [{ name: '分层依赖方向', confirmedDecision: 'API 层只依赖服务层', scope: '整个订单后台', impact: '禁止 handler 直接访问存储', rejectedAlternatives: '不采用 handler 直连存储，避免职责分散', evidence: ['main.go'] }],
   componentDiagram: '@startuml\ntitle 订单系统\n[api] --> [service]\n@enduml',
   fileTreeDescriptions: { 'main.go': '程序入口:HTTP server 启动与路由注册' },
   ruleAdjustments: {
@@ -65,6 +71,10 @@ test('knowledge drafts reject placeholders, unknown keys, malformed modules and 
   assert.throws(() => validateKnowledgeDraft(badDiagram), /componentDiagram/);
   const badEngineering = structuredClone(VALID_DRAFT); badEngineering.engineeringModules = [{ name: 'bad/name', modulePosition: 'x' }];
   assert.throws(() => validateKnowledgeDraft(badEngineering), /engineeringModules/);
+  const businessShapedEngineering = structuredClone(VALID_DRAFT); businessShapedEngineering.engineeringModules[0].name = '订单';
+  assert.throws(() => validateKnowledgeDraft(businessShapedEngineering), /business module|engineering boundary/i);
+  const unownedEngineering = structuredClone(VALID_DRAFT); unownedEngineering.engineeringModules[0].ownedPaths = [];
+  assert.throws(() => validateKnowledgeDraft(unownedEngineering), /ownedPaths|engineeringModules/);
   const unsafeBusiness = structuredClone(VALID_DRAFT); unsafeBusiness.businessModules[0].module = '../越界';
   assert.throws(() => validateKnowledgeDraft(unsafeBusiness), /businessModules/);
   const missingEvidence = structuredClone(VALID_DRAFT); missingEvidence.project.evidence = ['missing.go'];
@@ -82,6 +92,26 @@ test('knowledge draft can describe only paths from the complete generated file t
     () => initializeConfirmed(root, draft),
     /file tree|missing\.go/i
   );
+});
+
+test('knowledge draft cannot omit shared domains detected in project paths', () => {
+  const cases = [
+    ['api', 'internal/http/order_handler.go'],
+    ['data', 'db/migrations/001_orders.sql'],
+    ['integration', 'internal/integration/payment_client.go'],
+    ['decisions', 'docs/adr/0001-layering.md']
+  ];
+  for (const [domain, path] of cases) {
+    const draft = structuredClone(VALID_DRAFT);
+    draft.fileTreeDescriptions = { [path]: '可读项目事实' };
+    draft.project.evidence = [path];
+    draft.project.architecture.evidence = [path];
+    draft.businessModules = [];
+    draft.engineeringModules = [];
+    draft.sharedKnowledge = { api: [], data: [], integration: [] };
+    draft.decisions = [];
+    assert.throws(() => validateKnowledgeDraft(draft, { sourceFiles: new Set([path]) }), new RegExp(`${domain}.*must be documented`, 'i'));
+  }
 });
 
 test('apply refuses to create a completed-looking knowledge system without a reviewed draft', async (t) => {
@@ -112,6 +142,8 @@ test('init --apply --knowledge fills knowledge, function, architecture and rules
   const entry = await readFile(join(root, 'docs/knowledge/业务入口.md'), 'utf8');
   assert.ok(entry.includes('订单'));
   const engineering = await readFile(join(root, 'docs/knowledge/modules/路由注册.md'), 'utf8');
+  assert.ok(engineering.includes('工程边界类型'));
+  assert.ok(engineering.includes('runtime-component'));
   assert.ok(engineering.includes('main.go'));
   assert.ok(engineering.includes('main.go'));
   const puml = await readFile(join(root, 'docs/knowledge/architecture/component.puml'), 'utf8');
@@ -134,6 +166,11 @@ test('init --apply --knowledge fills knowledge, function, architecture and rules
   assert.equal(moduleIndex.modules[0].path, '订单');
   const functionIndex = JSON.parse(await readFile(join(root, 'docs/function/订单/function.json'), 'utf8'));
   assert.equal(functionIndex.functions[0].id, '下单');
+  assert.match(await readFile(join(root, 'docs/knowledge/api/订单 HTTP API.md'), 'utf8'), /POST \/orders/);
+  assert.match(await readFile(join(root, 'docs/knowledge/api/README.md'), 'utf8'), /订单 HTTP API/);
+  assert.match(await readFile(join(root, 'docs/knowledge/data/订单数据.md'), 'utf8'), /订单标识唯一/);
+  assert.match(await readFile(join(root, 'docs/knowledge/integration/订单服务调用.md'), 'utf8'), /提供方与消费方/);
+  assert.match(await readFile(join(root, 'docs/knowledge/decisions/分层依赖方向.md'), 'utf8'), /API 层只依赖服务层/);
   const tree = await readFile(join(root, 'docs/knowledge/文件树.md'), 'utf8');
   assert.ok(tree.includes('`main.go` — 程序入口:HTTP server 启动与路由注册'));
 });
@@ -193,11 +230,44 @@ test('finalize accepts valid knowledge owner backfills made after the path skele
     '## 兼容边界', '', '保持路径兼容', '', '## 生效机制', '', '启动时生效', '', '## 易误判点', '', '不是业务规则', '',
     '## 事实依据', '', '- `main.go`'
   ].join('\n'));
+  await mkdir(join(root, 'docs/knowledge/api'), { recursive: true });
+  await writeFile(join(root, 'docs/knowledge/api/README.md'), [
+    '# API 总索引', '', '权威来源：OpenAPI/IDL、网关或服务路由配置。Markdown 解释语义与兼容边界，不取代可执行契约。', '', '## 条目', '',
+    '| 名称 | 知识文档 |', '| --- | --- |', '| 订单 HTTP API | [订单 HTTP API](订单 HTTP API.md) |'
+  ].join('\n'));
+  await writeFile(join(root, 'docs/knowledge/api/订单 HTTP API.md'), [
+    '# 订单 HTTP API', '', '## 接口清单', '', 'POST /orders 创建订单', '', '## 请求与响应', '', '请求包含订单信息，成功返回订单标识', '',
+    '## 错误语义', '', '校验失败返回 400', '', '## 版本与兼容', '', '保持 POST /orders 路径与现有字段语义', '', '## 事实依据', '', '- `main.go`'
+  ].join('\n'));
+  await mkdir(join(root, 'docs/knowledge/decisions'), { recursive: true });
+  await writeFile(join(root, 'docs/knowledge/decisions/README.md'), [
+    '# 项目级决策索引', '', '仅收录负责人确认、可跨任务复用的项目级决策；聊天过程、临时 Mock 与未确认假设不进入本索引。', '', '## 决策条目', '',
+    '| 名称 | 适用范围 | 知识文档 |', '| --- | --- | --- |', '| 分层依赖方向 | 整个订单后台 | [分层依赖方向](分层依赖方向.md) |'
+  ].join('\n'));
+  await writeFile(join(root, 'docs/knowledge/decisions/分层依赖方向.md'), [
+    '# 分层依赖方向', '', '## 已确认决策', '', 'API 层只依赖服务层', '', '## 适用范围', '', '整个订单后台', '',
+    '## 影响', '', '禁止 handler 直接访问存储', '', '## 不采用的方案与原因', '', '不采用 handler 直连存储，避免职责分散', '', '## 事实依据', '', '- `main.go`'
+  ].join('\n'));
   const draft = structuredClone(VALID_DRAFT);
   draft.fileTreeDescriptions = { 'main.go': '程序入口与进程启动' };
   const finalized = await initializeProject(root, { phase: 'finalize', knowledgeDraft: draft, sourceEntries: ['main.go'] });
   assert.equal(finalized.knowledgeFilled, true);
   assert.ok((await readFile(join(root, 'docs/knowledge/modules/路由注册.md'), 'utf8')).includes('## 易误判点'));
+});
+
+test('finalize rejects a malformed shared knowledge index backfilled by a writer', async (t) => {
+  const root = await scratch(t);
+  await writeFile(join(root, 'main.go'), 'package main\n', 'utf8');
+  await initializeProject(root, { phase: 'prepare' });
+  for (const id of CHECKLIST_IDS) await confirmChecklistItem(root, { id, actor: 'owner', at: '2026-09-10T00:00:00.000Z' });
+  await mkdir(join(root, 'docs/knowledge/decisions'), { recursive: true });
+  await writeFile(join(root, 'docs/knowledge/decisions/README.md'), '# 项目级决策索引\n\n## 错误章节\n');
+  const draft = structuredClone(VALID_DRAFT);
+  draft.fileTreeDescriptions = { 'main.go': '程序入口与进程启动' };
+  await assert.rejects(
+    () => initializeProject(root, { phase: 'finalize', knowledgeDraft: draft, sourceEntries: ['main.go'] }),
+    /decisions\/README\.md|knowledge index/i
+  );
 });
 
 test('finalize rejects a file tree changed by a subagent because runtime is its only writer', async (t) => {

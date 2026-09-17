@@ -76,7 +76,7 @@ const CONTRACTS = Object.freeze({
   'templates/engineering/模块说明.md': {
     title: '<engineering-module-name>',
     headings: ['<engineering-module-name>', '模块定位', '目录与入口', '核心组成', '主要流程', '跨端关系', '兼容边界', '生效机制', '易误判点', '事实依据'],
-    placeholders: ['<engineering-module-name>', '<module-purpose>', '<module-entrypoints>', '<module-components>', '<module-flow>', '<cross-component-relationships>', '<compatibility-boundaries>', '<activation-mechanism>', '<non-obvious-facts-and-source-references>', '<fact-paths>'],
+    placeholders: ['<engineering-module-name>', '<engineering-boundary-type>', '<owned-source-paths>', '<module-purpose>', '<module-entrypoints>', '<module-components>', '<module-flow>', '<cross-component-relationships>', '<compatibility-boundaries>', '<activation-mechanism>', '<non-obvious-facts-and-source-references>', '<fact-paths>'],
     strictBody: true
   },
   'templates/decisions/决策说明.md': {
@@ -609,7 +609,7 @@ export function validateCompletedDocument(relativePath, text, { expectedPaths = 
   const templatePath = normalized.startsWith('templates/') ? normalized :
     normalized === 'CODEBUDDY.md' ? 'templates/project/CODEBUDDY.md' :
     normalized === 'docs/workflows/README.md' ? 'templates/project/docs/workflows/README.md' :
-    normalized.startsWith('docs/knowledge/decisions/') ? 'templates/decisions/决策说明.md' :
+    normalized.startsWith('docs/knowledge/decisions/') && !normalized.endsWith('/README.md') ? 'templates/decisions/决策说明.md' :
     normalized.startsWith('docs/knowledge/api/') && !normalized.endsWith('/README.md') ? 'templates/shared/api.md' :
     normalized.startsWith('docs/knowledge/data/') && !normalized.endsWith('/README.md') ? 'templates/shared/data.md' :
     normalized.startsWith('docs/knowledge/integration/') && !normalized.endsWith('/README.md') ? 'templates/shared/integration.md' :

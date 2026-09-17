@@ -1,6 +1,6 @@
 # AI Coding Harness · CodeBuddy Plugin
 
-发布版本：`0.9.0`
+发布版本：`0.9.1`
 
 这是给 CodeBuddy 的团队开发流程插件。它通过一个自然语言入口引导项目完成初始化、需求澄清、设计、开发、独立评审和知识回写；成员无需手工维护 workflow JSON。
 
@@ -118,9 +118,9 @@ Desktop 可执行等价的 `/plugin marketplace update ai-market` 与 `/plugin u
 
 初始化由一名项目管理员发起，其他成员等待其提交 Git 后拉取：
 
-1. 主 Agent 全量扫描项目，运行时先生成文件树路径骨架。
-2. 主 Agent 按真实依赖把明确路径分别交给业务知识 writer 和工程知识 writer；writer 不自行 Glob/Grep 全仓。
-3. 业务 writer 写业务知识，工程 writer 写项目总览、工程模块和组件图源；Rules writer 最后只读取已落盘知识。
+1. 运行时全量盘点项目路径并生成文件树骨架；主 Agent 不读取全仓源文内容。
+2. 主 Agent 按业务模块与工程边界分批，每个 writer 实例最多读取 20 个文件，不自行 Glob/Grep 全仓。
+3. 业务 writer 写 `docs/function/`；工程 writer 按构建/运行时/代码归属组织 `modules/`，并在发现事实时同步写完 `api/`、`data/`、`integration/`、`decisions/`；Rules writer 最后只读已落盘知识。
 4. 运行时统一回写文件树，并渲染默认供人查看的 SVG。
 5. 顶层 Skill 逐项询问八个 checklist 问题并代用户记录确认；用户不编辑 JSON。
 6. doctor 验证结构、完成态内容，以及共享契约未被 Git 忽略且已被跟踪。

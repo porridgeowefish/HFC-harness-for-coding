@@ -27,7 +27,7 @@
 - `docs/knowledge/文件树.md`：初始化、创建业务功能、工程模块或 workflow 时刷新导航；树形缩进输出。
 - `docs/workflows/README.md`：总任务导航；每个任务的 `README.md` 导航到其十份业务产物。
 
-初始化由顶层自然语言 Skill 调度动态 subagent 图：主 Agent 先扫描全量路径，运行时写路径骨架；每个可读路径只分配给一位业务或工程阅读负责人。`business-knowledge-writer` 只写 `docs/function/**` 和依赖工程路径的 `业务入口.md`；`engineering-knowledge-writer` 只写项目总览、工程模块说明和 `component.puml`；`rules-writer` 只在知识入口落盘后写 Rules。三个 Agent 都不得写文件树；运行时根据它们的已阅读事实一次写入 `docs/knowledge/文件树.md`，并从 `component.puml` 渲染供人阅读的 SVG。CLI 是受控持久化边界：`harness init --phase prepare` 只落静态入口、共享配置和路径骨架；顶层 Skill 在同一编排会话中引导八项 checklist 后，`harness init --phase finalize --knowledge <draft.json>` 才应用完整事实。CLI 输出只含计数和识别提示，不含全量路径清单。脱离 prepare 会话的 standalone finalize 对已有长期资产 fail-closed，不覆盖项目文档；无完整事实草案或未确认 checklist 不得应用占位骨架。
+初始化由顶层自然语言 Skill 调度动态 subagent 图：运行时先盘点全量路径并写骨架，主 Agent 不读全仓源文内容。每个业务或工程 writer 实例最多读取 20 个文件并只处理一个业务模块或工程边界。`business-knowledge-writer` 写 `docs/function/**` 和 `业务入口.md`；`engineering-knowledge-writer` 按构建/运行时/代码归属组织 `modules/`，并在检测到事实时完成 `api/`、`data/`、`integration/`、`decisions/`、项目总览和 `component.puml`；`rules-writer` 只读已落盘知识。运行时独占 `文件树.md` 和 SVG 生成。CLI 输出只含计数和识别提示；无完整事实草案、缺失已检测共享知识域或未确认 checklist 时均不得 finalize。
 
 本地证据确实需要文件存储时，使用 `.codebuddy/workflows/<workflow-id>/evidence/`；外部证据可保留链接。没有本地证据时不创建空 evidence 目录。
 

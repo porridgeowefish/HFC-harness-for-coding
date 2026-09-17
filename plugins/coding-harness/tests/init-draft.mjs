@@ -11,6 +11,8 @@ export function reviewedDraft(fileTreeDescriptions = {}) {
     },
     businessModules: [],
     engineeringModules: [],
+    sharedKnowledge: { api: [], data: [], integration: [] },
+    decisions: [],
     componentDiagram: '@startuml\ntitle 测试项目\n[应用]\n@enduml',
     fileTreeDescriptions,
     ruleAdjustments: {

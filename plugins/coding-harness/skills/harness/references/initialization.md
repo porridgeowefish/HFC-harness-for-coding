@@ -6,10 +6,10 @@
 
 ## 执行顺序
 
-1. 主 Agent 全量扫描可见文件与目录，调用 `init --phase prepare`，让运行时先生成只有真实路径的文件树骨架。
-2. 主 Agent依据文件树和依赖关系建立会话内路径所有权表。每个可读源码路径只分配给一个知识 writer；分区过大时继续拆小，不能放宽 turn 上限。
-3. `business-knowledge-writer` 读取明确分配的路径，只写 `docs/function/**`；工程知识路径落盘后再写 `docs/knowledge/业务入口.md`。
-4. `engineering-knowledge-writer` 读取明确分配的路径，只写 `项目总览.md`、`modules/*.md` 和 `architecture/component.puml`。它必须先完成总览，再从广到深完成模块事实。
+1. 调用 `init --phase prepare`。由运行时全量盘点路径并生成只含真实路径的文件树骨架；主 Agent 不读取源文件内容，不把全量源码或完整文件树复制进会话。
+2. 主 Agent 只用路径骨架按业务模块和工程边界建立会话内所有权表。每个 writer 实例最多 20 个可读文件，只负责一个业务模块或工程边界；超限必须启动同角色的新实例，不得放宽 turn 或在主 Agent 中代读。
+3. 多个 `business-knowledge-writer` 实例分别读取互斥批次并直接回写各自的 `docs/function/<业务模块>/**`；最后一个业务 writer 只读已写索引和工程文档路径，生成 `业务入口.md`。
+4. 多个 `engineering-knowledge-writer` 实例分别按工程边界回写 `modules/`、`api/`、`data/`、`integration/` 和 `decisions/`。最后一个工程 writer 只读已落盘知识，从广到深生成 `项目总览.md`、各域索引与 `architecture/component.puml`。
 5. 两类 writer 只回传已写路径、未识别项、必要交接和所分配路径的一句话事实用途，不回传源码全文或完整文件树。
 6. `rules-writer` 只读取已完成知识，不重扫源码；写且只写五份规范 Rules。
 7. 运行时汇总路径用途，完成态重写 `文件树.md`，并从 PlantUML 渲染默认供人查看的 `component.svg`。
@@ -20,6 +20,8 @@
 ## Agent 边界
 
 - writer 没有 Glob/Grep，只能读取主 Agent 明确给出的路径与输出模板。
+- `modules/` 必须按构建模块、可部署服务、运行时组件、库包或基础设施等工程边界组织；业务域只进入 `docs/function/`。
+- 发现对应事实时，`api/`、`data/`、`integration/`、`decisions/` 必须在初始化中完成，不留到后续按需补建。
 - 业务与工程职责按知识类型拆分，不按“都处理文件树”拆分；文件树始终由运行时统一生成。
 - `rules-writer` 必须在两类知识完成后运行。
 - 不创建 `gates.md`、`harness-self.md`、`核心约束.md`、`启动入口.md` 或任何模板未登记文件。

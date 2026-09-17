@@ -4,7 +4,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CANONICAL_PROJECT_FILES, CHECKLIST_IDS, CHECKLIST_LABELS, RULE_FILES } from './contract.mjs';
 import { previewFileTree, refreshFileTree } from './navigation.mjs';
-import { validateCompletedDocument } from './markdown-contract.mjs';
+import { parseMarkdownStructure, validateCompletedDocument } from './markdown-contract.mjs';
 
 const pluginRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const templateRoot = join(pluginRoot, 'templates', 'project');
@@ -154,6 +154,14 @@ async function existingKnowledgeAssets(root, draft, { allowPrepared = false, pre
     'docs/knowledge/architecture/component.puml', 'docs/knowledge/architecture/component.svg',
     ...RULE_FILES.map((name) => `.codebuddy/rules/${name}`),
     ...draft.engineeringModules.map((module) => `docs/knowledge/modules/${module.name}.md`),
+    ...['api', 'data', 'integration'].flatMap((domain) => (draft.sharedKnowledge?.[domain] ?? []).flatMap((item, index) => [
+      ...(index === 0 ? [`docs/knowledge/${domain}/README.md`] : []),
+      `docs/knowledge/${domain}/${item.name}.md`
+    ])),
+    ...draft.decisions.flatMap((item, index) => [
+      ...(index === 0 ? ['docs/knowledge/decisions/README.md'] : []),
+      `docs/knowledge/decisions/${item.name}.md`
+    ]),
     ...draft.businessModules.flatMap((module) => [
       `docs/function/${module.module}/function.json`,
       ...module.features.flatMap((feature) => [
@@ -195,6 +203,7 @@ async function existingKnowledgeAssets(root, draft, { allowPrepared = false, pre
     }
   }
   await visit('docs/knowledge/modules');
+  for (const domain of ['api', 'data', 'integration', 'decisions']) await visit(`docs/knowledge/${domain}`);
   await visit('docs/function');
   await visit('.codebuddy/rules');
   return [...new Set(conflicts)].sort();
@@ -214,6 +223,18 @@ async function reusablePreparedAssetErrors(root, relativePath, { expectedPaths =
       if (relativePath === 'docs/function/module.json' && (value?.schemaVersion !== '1.0' || !Array.isArray(value.modules))) return [`${relativePath} has an invalid module index`];
       if (relativePath.endsWith('/function.json') && (!Array.isArray(value?.functions) || Object.keys(value).some((key) => key !== 'functions'))) return [`${relativePath} has an invalid function index`];
     } catch (error) { return [`${relativePath} is not valid JSON: ${error.message}`]; }
+    return [];
+  }
+  const indexDomain = relativePath.match(/^docs\/knowledge\/(api|data|integration|decisions)\/README\.md$/)?.[1];
+  if (indexDomain) {
+    const structure = parseMarkdownStructure(text);
+    const expectedTitle = ({ api: 'API 总索引', data: '数据总索引', integration: '集成总索引', decisions: '项目级决策索引' })[indexDomain];
+    const expectedHeading = indexDomain === 'decisions' ? '决策条目' : '条目';
+    const expectedHeader = indexDomain === 'decisions' ? ['名称', '适用范围', '知识文档'] : ['名称', '知识文档'];
+    const table = structure.tables[0];
+    const validRows = table?.rows.length > 0 && table.rows.every((row) => row.length === expectedHeader.length && /^\[[^\]]+\]\([^)]*\.md\)$/.test(row.at(-1)));
+    if (structure.title !== expectedTitle || structure.headings.length !== 2 || structure.headings[1]?.level !== 2 || structure.headings[1]?.text !== expectedHeading ||
+        structure.tables.length !== 1 || JSON.stringify(table?.header) !== JSON.stringify(expectedHeader) || !validRows) return [`${relativePath} has an invalid shared knowledge index`];
     return [];
   }
   return validateCompletedDocument(relativePath, text, relativePath.endsWith('文件树.md') ? { expectedPaths } : {});
@@ -348,12 +369,31 @@ export async function discoverProject(root) {
   };
 }
 
-const KNOWLEDGE_ROOT_KEYS = new Set(['schemaVersion', 'project', 'businessModules', 'engineeringModules', 'componentDiagram', 'fileTreeDescriptions', 'ruleAdjustments']);
+const KNOWLEDGE_ROOT_KEYS = new Set(['schemaVersion', 'project', 'businessModules', 'engineeringModules', 'sharedKnowledge', 'decisions', 'componentDiagram', 'fileTreeDescriptions', 'ruleAdjustments']);
 const PROJECT_KEYS = new Set(['purpose', 'stack', 'architecture', 'entrypoints', 'topModules', 'unrecognized', 'evidence']);
 const ARCHITECTURE_KEYS = new Set(['style', 'layers', 'components', 'dependencyDirection', 'dataFlows', 'boundaries', 'diagramPath', 'evidence']);
 const MODULE_KEYS = new Set(['module', 'features']);
 const FEATURE_KEYS = new Set(['name', 'currentStatus', 'currentCapability', 'businessRules', 'boundaries', 'mainFlow', 'engineeringEntrypoints', 'evidence']);
-const ENGINEERING_MODULE_KEYS = new Set(['name', 'modulePosition', 'directoryAndEntrypoints', 'coreComponents', 'mainFlow', 'crossComponentRelations', 'compatibilityBoundary', 'activationMechanism', 'easyMisjudgments', 'evidence']);
+const ENGINEERING_MODULE_KEYS = new Set(['name', 'boundaryType', 'ownedPaths', 'modulePosition', 'directoryAndEntrypoints', 'coreComponents', 'mainFlow', 'crossComponentRelations', 'compatibilityBoundary', 'activationMechanism', 'easyMisjudgments', 'evidence']);
+const ENGINEERING_BOUNDARY_TYPES = new Set(['repository-root', 'build-module', 'deployable-service', 'runtime-component', 'library-package', 'infrastructure']);
+const SHARED_ROOT_KEYS = new Set(['api', 'data', 'integration']);
+const SHARED_ENTRY_KEYS = Object.freeze({
+  api: new Set(['name', 'inventory', 'requestAndResponse', 'errorSemantics', 'compatibility', 'evidence']),
+  data: new Set(['name', 'entitiesAndRelations', 'fieldSemantics', 'indexesAndConstraints', 'compatibility', 'evidence']),
+  integration: new Set(['name', 'providersAndConsumers', 'schemaAndAuthentication', 'idempotencyAndOrdering', 'failureHandling', 'evidence'])
+});
+const SHARED_TEXT_FIELDS = Object.freeze({
+  api: ['inventory', 'requestAndResponse', 'errorSemantics', 'compatibility'],
+  data: ['entitiesAndRelations', 'fieldSemantics', 'indexesAndConstraints', 'compatibility'],
+  integration: ['providersAndConsumers', 'schemaAndAuthentication', 'idempotencyAndOrdering', 'failureHandling']
+});
+const DECISION_KEYS = new Set(['name', 'confirmedDecision', 'scope', 'impact', 'rejectedAlternatives', 'evidence']);
+const KNOWLEDGE_PATH_HINTS = Object.freeze({
+  api: /(?:^|[\/_.-])(?:api|apis|http|controller|controllers|handler|handlers|routes?|openapi|swagger)(?:[\/_.-]|$)/i,
+  data: /(?:^|[\/_.-])(?:db|database|migrations?|schema|entities|models?|repositories|dao)(?:[\/_.-]|$)/i,
+  integration: /(?:^|[\/_.-])(?:integration|integrations|clients?|rpc|grpc|kafka|mq|events?)(?:[\/_.-]|$)/i,
+  decisions: /(?:^|[\/_.-])(?:adr|decisions?)(?:[\/_.-]|$)/i
+});
 const RULE_ADJUSTMENT_KEYS = new Set(['scope', 'mustFollow', 'knowledgePaths', 'verification', 'updateThreshold']);
 
 function knowledgeDraftError(value, violation) { return new Error(`invalid init knowledge draft: ${violation}`); }
@@ -414,11 +454,40 @@ export function validateKnowledgeDraft(value, { sourceFiles = null } = {}) {
   if (!Array.isArray(value.engineeringModules)) violations.push('engineeringModules must be an array');
   else {
     const engineeringNames = new Set();
+    const businessNames = new Set((Array.isArray(value.businessModules) ? value.businessModules : []).map((module) => module?.module));
     for (const module of value.engineeringModules) {
+    if (businessNames.has(module?.name)) { violations.push(`engineering module ${module.name} duplicates a business module instead of declaring an engineering boundary`); break; }
     if (!module || typeof module !== 'object' || Array.isArray(module) || Object.keys(module).some((key) => !ENGINEERING_MODULE_KEYS.has(key)) ||
-        !safeKnowledgeName(module.name) || engineeringNames.has(module.name) ||
+        !safeKnowledgeName(module.name) || engineeringNames.has(module.name) || !ENGINEERING_BOUNDARY_TYPES.has(module.boundaryType) ||
+        !list(module.ownedPaths, 'engineering module ownedPaths') ||
         !['modulePosition', 'directoryAndEntrypoints', 'coreComponents', 'mainFlow', 'crossComponentRelations', 'compatibilityBoundary', 'activationMechanism', 'easyMisjudgments'].every((key) => typeof module[key] === 'string' && module[key].trim()) || !list(module.evidence, 'engineering module evidence')) { violations.push('engineeringModules entries must carry all module sections and evidence'); break; }
     engineeringNames.add(module.name);
+    }
+  }
+  if (!value.sharedKnowledge || typeof value.sharedKnowledge !== 'object' || Array.isArray(value.sharedKnowledge) ||
+      Object.keys(value.sharedKnowledge).some((key) => !SHARED_ROOT_KEYS.has(key)) || [...SHARED_ROOT_KEYS].some((key) => !Array.isArray(value.sharedKnowledge[key]))) {
+    violations.push('sharedKnowledge must contain api, data and integration arrays');
+  } else {
+    for (const domain of SHARED_ROOT_KEYS) {
+      const names = new Set();
+      for (const item of value.sharedKnowledge[domain]) {
+        if (!objectWith(item, SHARED_ENTRY_KEYS[domain], `sharedKnowledge.${domain}`) || !safeKnowledgeName(item.name) || names.has(item.name) ||
+            SHARED_TEXT_FIELDS[domain].some((key) => typeof item[key] !== 'string' || !item[key].trim()) || !list(item.evidence, `sharedKnowledge.${domain} evidence`)) {
+          violations.push(`sharedKnowledge.${domain} entries must carry unique names, complete facts and evidence`); break;
+        }
+        names.add(item.name);
+      }
+    }
+  }
+  if (!Array.isArray(value.decisions)) violations.push('decisions must be an array');
+  else {
+    const names = new Set();
+    for (const item of value.decisions) {
+      if (!objectWith(item, DECISION_KEYS, 'decision') || !safeKnowledgeName(item.name) || names.has(item.name) ||
+          ['confirmedDecision', 'scope', 'impact', 'rejectedAlternatives'].some((key) => typeof item[key] !== 'string' || !item[key].trim()) || !list(item.evidence, 'decision evidence')) {
+        violations.push('decisions entries must carry unique names, complete facts and evidence'); break;
+      }
+      names.add(item.name);
     }
   }
   if (typeof value.componentDiagram !== 'string' || !/@startuml[\s\S]*@enduml/.test(value.componentDiagram)) violations.push('componentDiagram must be PlantUML text between @startuml and @enduml');
@@ -440,15 +509,26 @@ export function validateKnowledgeDraft(value, { sourceFiles = null } = {}) {
     const unexpected = [...documentedNormalised].filter((path) => !expectedNormalised.has(path));
     if (missing.length || unexpected.length) violations.push(`file tree descriptions must match generated project files; missing: ${missing.join(', ') || 'none'}; unexpected: ${unexpected.join(', ') || 'none'}`);
     if (sourceFiles.size > 0) {
+      for (const [domain, pattern] of Object.entries(KNOWLEDGE_PATH_HINTS)) {
+        const detected = [...sourceFiles].some((path) => pattern.test(String(path).replaceAll('\\', '/')));
+        const documented = domain === 'decisions' ? value.decisions?.length : value.sharedKnowledge?.[domain]?.length;
+        if (detected && !documented) violations.push(`${domain} knowledge detected in project paths must be documented during initialization`);
+      }
       const evidenceCollections = [
         ['project.evidence', project?.evidence],
         ['project.architecture.evidence', project?.architecture?.evidence],
         ...((Array.isArray(value.businessModules) ? value.businessModules : []).flatMap((module) => module.features.map((feature) => [`feature ${module.module}/${feature.name} evidence`, feature.evidence]))),
-        ...((Array.isArray(value.engineeringModules) ? value.engineeringModules : []).map((module) => [`engineering module ${module.name} evidence`, module.evidence]))
+        ...((Array.isArray(value.engineeringModules) ? value.engineeringModules : []).flatMap((module) => [[`engineering module ${module.name} ownedPaths`, module.ownedPaths], [`engineering module ${module.name} evidence`, module.evidence]])),
+        ...([...SHARED_ROOT_KEYS].flatMap((domain) => (value.sharedKnowledge?.[domain] ?? []).map((item) => [`shared ${domain} ${item.name} evidence`, item.evidence]))),
+        ...((Array.isArray(value.decisions) ? value.decisions : []).map((item) => [`decision ${item.name} evidence`, item.evidence]))
       ];
       for (const [name, paths] of evidenceCollections) for (const rawPath of Array.isArray(paths) ? paths : []) {
         const path = String(rawPath).replaceAll('\\', '/').replace(/^\.\//, '');
         if (!path || path.startsWith('/') || /^[A-Za-z]:\//.test(path) || path.split('/').includes('..') || !expectedNormalised.has(path.replace(/\/$/, ''))) violations.push(`${name} contains an evidence path not present in the scanned project: ${rawPath}`);
+      }
+      for (const module of Array.isArray(value.engineeringModules) ? value.engineeringModules : []) {
+        const owned = (module.ownedPaths ?? []).map((path) => String(path).replaceAll('\\', '/').replace(/\/$/, ''));
+        if ((module.evidence ?? []).some((path) => !owned.some((rootPath) => path === rootPath || path.startsWith(`${rootPath}/`)))) violations.push(`engineering module ${module.name} evidence must stay inside its ownedPaths engineering boundary`);
       }
     }
   }
@@ -456,7 +536,9 @@ export function validateKnowledgeDraft(value, { sourceFiles = null } = {}) {
     ['project.evidence', project?.evidence],
     ['project.architecture.evidence', project?.architecture?.evidence],
     ...((Array.isArray(value.businessModules) ? value.businessModules : []).flatMap((module) => module.features.map((feature) => [`feature ${module.module}/${feature.name} evidence`, feature.evidence]))),
-    ...((Array.isArray(value.engineeringModules) ? value.engineeringModules : []).map((module) => [`engineering module ${module.name} evidence`, module.evidence]))
+    ...((Array.isArray(value.engineeringModules) ? value.engineeringModules : []).flatMap((module) => [[`engineering module ${module.name} ownedPaths`, module.ownedPaths], [`engineering module ${module.name} evidence`, module.evidence]])),
+    ...([...SHARED_ROOT_KEYS].flatMap((domain) => (value.sharedKnowledge?.[domain] ?? []).map((item) => [`shared ${domain} ${item.name} evidence`, item.evidence]))),
+    ...((Array.isArray(value.decisions) ? value.decisions : []).map((item) => [`decision ${item.name} evidence`, item.evidence]))
   ];
   for (const [name, paths] of allEvidenceCollections) for (const rawPath of Array.isArray(paths) ? paths : []) {
     const path = String(rawPath).replaceAll('\\', '/').replace(/^\.\//, '');
@@ -607,6 +689,14 @@ export async function initializeProject(projectRoot, { apply = false, knowledgeD
 function markdownList(items) { return items.map((item) => `- ${item}`).join('\n'); }
 function evidenceLines(paths) { return paths.map((path) => `- \`${path}\``).join('\n'); }
 function tableValue(value) { return String(value).replace(/[\r\n|]/g, ' ').trim(); }
+function knowledgeIndex(title, authority, items, extraColumn = null) {
+  const header = extraColumn ? `| 名称 | ${extraColumn} | 知识文档 |` : '| 名称 | 知识文档 |';
+  const separator = extraColumn ? '| --- | --- | --- |' : '| --- | --- |';
+  const rows = items.map((item) => extraColumn
+    ? `| ${tableValue(item.name)} | ${tableValue(item.scope)} | [${tableValue(item.name)}](${item.name}.md) |`
+    : `| ${tableValue(item.name)} | [${tableValue(item.name)}](${item.name}.md) |`);
+  return [`# ${title}`, '', authority, '', extraColumn ? '## 决策条目' : '## 条目', '', header, separator, ...rows].join('\n');
+}
 
 async function applyKnowledgeDraft(root, draft, { allowPrepared = false, preparedBaseline = new Set(), hasPreparedContext = false } = {}) {
   const { stack, entrypoints, topModules, unrecognized, purpose, architecture, evidence } = draft.project;
@@ -643,7 +733,10 @@ async function applyKnowledgeDraft(root, draft, { allowPrepared = false, prepare
   for (const module of draft.engineeringModules) {
     writes.push([`docs/knowledge/modules/${module.name}.md`, [
       `# ${module.name}`, '',
-      '## 模块定位', '', module.modulePosition, '',
+      '## 模块定位', '',
+      `- 工程边界类型：${module.boundaryType}`,
+      `- 归属路径：${module.ownedPaths.map((path) => `\`${path}\``).join('、')}`,
+      `- 职责：${module.modulePosition}`, '',
       '## 目录与入口', '', module.directoryAndEntrypoints, '',
       '## 核心组成', '', module.coreComponents, '',
       '## 主要流程', '', module.mainFlow, '',
@@ -652,6 +745,33 @@ async function applyKnowledgeDraft(root, draft, { allowPrepared = false, prepare
       '## 生效机制', '', module.activationMechanism, '',
       '## 易误判点', '', module.easyMisjudgments, '',
       '## 事实依据', '', evidenceLines(module.evidence)
+    ].join('\n')]);
+  }
+  const sharedConfigurations = {
+    api: {
+      title: 'API 总索引', authority: '权威来源：OpenAPI/IDL、网关或服务路由配置。Markdown 解释语义与兼容边界，不取代可执行契约。',
+      document: (item) => [`# ${item.name}`, '', '## 接口清单', '', item.inventory, '', '## 请求与响应', '', item.requestAndResponse, '', '## 错误语义', '', item.errorSemantics, '', '## 版本与兼容', '', item.compatibility, '', '## 事实依据', '', evidenceLines(item.evidence)].join('\n')
+    },
+    data: {
+      title: '数据总索引', authority: '权威来源：Migration/DDL、受控 Schema 与实体映射。Markdown 解释数据语义与关系，不取代可执行模型。',
+      document: (item) => [`# ${item.name}`, '', '## 实体与表关系', '', item.entitiesAndRelations, '', '## 字段语义', '', item.fieldSemantics, '', '## 索引与约束', '', item.indexesAndConstraints, '', '## 变更与兼容', '', item.compatibility, '', '## 事实依据', '', evidenceLines(item.evidence)].join('\n')
+    },
+    integration: {
+      title: '集成总索引', authority: '权威来源：RPC/IDL、消息 Schema、Topic 配置、外部适配器与供应商协议。Markdown 解释集成语义，不取代受控配置。',
+      document: (item) => [`# ${item.name}`, '', '## 提供方与消费方', '', item.providersAndConsumers, '', '## Schema 与认证', '', item.schemaAndAuthentication, '', '## 幂等与顺序', '', item.idempotencyAndOrdering, '', '## 失败处理', '', item.failureHandling, '', '## 事实依据', '', evidenceLines(item.evidence)].join('\n')
+    }
+  };
+  for (const [domain, configuration] of Object.entries(sharedConfigurations)) {
+    const items = draft.sharedKnowledge[domain];
+    if (!items.length) continue;
+    writes.push([`docs/knowledge/${domain}/README.md`, knowledgeIndex(configuration.title, configuration.authority, items)]);
+    for (const item of items) writes.push([`docs/knowledge/${domain}/${item.name}.md`, configuration.document(item)]);
+  }
+  if (draft.decisions.length) {
+    writes.push(['docs/knowledge/decisions/README.md', knowledgeIndex('项目级决策索引', '仅收录负责人确认、可跨任务复用的项目级决策；聊天过程、临时 Mock 与未确认假设不进入本索引。', draft.decisions, '适用范围')]);
+    for (const item of draft.decisions) writes.push([`docs/knowledge/decisions/${item.name}.md`, [
+      `# ${item.name}`, '', '## 已确认决策', '', item.confirmedDecision, '', '## 适用范围', '', item.scope, '',
+      '## 影响', '', item.impact, '', '## 不采用的方案与原因', '', item.rejectedAlternatives, '', '## 事实依据', '', evidenceLines(item.evidence)
     ].join('\n')]);
   }
   const ruleBaselines = {
@@ -717,7 +837,7 @@ async function applyKnowledgeDraft(root, draft, { allowPrepared = false, prepare
   }
   writes.push(['docs/function/module.json', JSON.stringify(moduleIndex, null, 2)]);
   for (const [relativePath, text] of writes) {
-    if (!relativePath.endsWith('.md')) continue;
+    if (!relativePath.endsWith('.md') || relativePath.endsWith('/README.md')) continue;
     const errors = validateCompletedDocument(relativePath, `${text}\n`);
     if (errors.length) throw new Error(`generated knowledge document violates its Markdown contract (${relativePath}): ${errors.join('; ')}`);
   }

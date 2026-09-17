@@ -20,6 +20,7 @@ const FEATURE_FACTS = {
   mainBusinessFlow: '控制器调用服务并返回结果。', evidence: ['CODEBUDDY.md']
 };
 const MODULE_FACTS = {
+  boundaryType: 'repository-root', ownedPaths: ['CODEBUDDY.md'],
   modulePosition: '负责工程模块职责。', directoryAndEntrypoints: '入口由项目源码确定。',
   coreComponents: '包含模块核心组件。', mainFlow: '启动后按依赖方向执行。',
   crossComponentRelations: '与相邻模块通过接口协作。', compatibilityBoundary: '保持现有接口兼容。',

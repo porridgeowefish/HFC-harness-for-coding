@@ -18,6 +18,8 @@ const FEATURE_FACTS = {
   evidence: ['CODEBUDDY.md']
 };
 const MODULE_FACTS = {
+  boundaryType: 'repository-root',
+  ownedPaths: ['CODEBUDDY.md'],
   modulePosition: '负责订单服务的业务编排。',
   directoryAndEntrypoints: '入口位于 README.md 描述的服务目录。',
   coreComponents: '由控制器、服务和仓储组成。',

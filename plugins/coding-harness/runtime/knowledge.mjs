@@ -46,7 +46,7 @@ function factSet(value, required, label) {
   const unknown = Object.keys(value).filter((key) => !required.includes(key));
   if (unknown.length) throw new Error(`${label} facts contain unknown fields: ${unknown.join(', ')}`);
   for (const key of required) {
-    if (key === 'evidence') {
+    if (key === 'evidence' || key === 'ownedPaths') {
       if (!Array.isArray(value[key]) || value[key].length === 0 || value[key].some((item) => typeof item !== 'string' || !item.trim() || item.includes('..') || item.startsWith('/') || /^[A-Za-z]:[\\/]/.test(item))) throw new Error(`${label}.${key} must contain relative evidence paths`);
     } else if (typeof value[key] !== 'string' || !value[key].trim() || /(?:待确认|待补充|尚未|未提供|暂无|未知|TODO|TBD)/i.test(value[key])) throw new Error(`${label}.${key} must contain confirmed concrete facts`);
   }
@@ -184,8 +184,11 @@ export async function createEngineeringModule(projectRoot, name, facts = null) {
   await rejectSymlinkAncestors(root, 'docs', 'knowledge', 'modules', `${name}.md`);
   await requireDirectory(knowledgeRoot, 'canonical engineering knowledge root');
   if (await stat(target)) throw new Error('engineering module already exists');
-  const confirmedFacts = factSet(facts, ['modulePosition', 'directoryAndEntrypoints', 'coreComponents', 'mainFlow', 'crossComponentRelations', 'compatibilityBoundary', 'activationMechanism', 'easyMisjudgments', 'evidence'], 'engineering module');
-  for (const evidencePath of confirmedFacts.evidence) {
+  const confirmedFacts = factSet(facts, ['boundaryType', 'ownedPaths', 'modulePosition', 'directoryAndEntrypoints', 'coreComponents', 'mainFlow', 'crossComponentRelations', 'compatibilityBoundary', 'activationMechanism', 'easyMisjudgments', 'evidence'], 'engineering module');
+  if (!['repository-root', 'build-module', 'deployable-service', 'runtime-component', 'library-package', 'infrastructure'].includes(confirmedFacts.boundaryType)) throw new Error('engineering module boundaryType is invalid');
+  if (!Array.isArray(confirmedFacts.ownedPaths) || !confirmedFacts.ownedPaths.length || confirmedFacts.ownedPaths.some((path) => typeof path !== 'string' || !path.trim())) throw new Error('engineering module ownedPaths must be a non-empty path array');
+  if (confirmedFacts.evidence.some((path) => !confirmedFacts.ownedPaths.some((owner) => path === owner.replace(/\/$/, '') || path.startsWith(`${owner.replace(/\/$/, '')}/`)))) throw new Error('engineering module evidence must stay inside ownedPaths');
+  for (const evidencePath of [...new Set([...confirmedFacts.ownedPaths, ...confirmedFacts.evidence])]) {
     const info = await stat(childPath(root, ...evidencePath.replaceAll('\\', '/').split('/')));
     if (!info || info.isSymbolicLink()) throw new Error(`engineering module evidence path does not exist in the project: ${evidencePath}`);
   }
@@ -197,6 +200,8 @@ export async function createEngineeringModule(projectRoot, name, facts = null) {
     await mkdir(targetDirectory, { recursive: true });
     const moduleDocument = fillTemplate(template, {
       'engineering-module-name': name,
+      'engineering-boundary-type': confirmedFacts.boundaryType,
+      'owned-source-paths': confirmedFacts.ownedPaths.map((path) => `\`${path}\``).join('、'),
       'module-purpose': confirmedFacts.modulePosition,
       'module-entrypoints': confirmedFacts.directoryAndEntrypoints,
       'module-components': confirmedFacts.coreComponents,
