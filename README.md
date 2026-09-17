@@ -13,9 +13,9 @@
 
 详细海报：
 
-- [项目特色 1：从全量扫描到项目知识体系](docs/release/0.9.0/posters/项目特色1-让AI真正读懂项目.png)
-- [项目特色 2：可确认、可恢复、可审查的工程流程](docs/release/0.9.0/posters/项目特色2-让AI严格走完整开发流程.png)
-- [项目特色 3：用更少上下文实现可靠团队协作](docs/release/0.9.0/posters/项目特色3-控制上下文支持可靠协作.png)
+- [项目特色 1：从全量扫描到项目知识体系](design/posters/0.9.0/项目特色1-让AI真正读懂项目.png)
+- [项目特色 2：可确认、可恢复、可审查的工程流程](design/posters/0.9.0/项目特色2-让AI严格走完整开发流程.png)
+- [项目特色 3：用更少上下文实现可靠团队协作](design/posters/0.9.0/项目特色3-控制上下文支持可靠协作.png)
 
 ## 前置条件
 
@@ -156,4 +156,14 @@ npm test --prefix plugins/coding-harness
 npm run validate --prefix plugins/coding-harness
 ```
 
-现行规范以《技术设计-流程模块与交接协议》和 `ADR-latest.md` 为准。已失效的阶段性方案不再随源码分发；需要追溯时使用 Git 历史。
+## 设计与演示资料
+
+非运行时资料统一放在 `design/`：
+
+- [技术设计：流程模块与交接协议](design/技术设计-流程模块与交接协议.md)
+- [现行架构决策记录](design/ADR-latest.md)
+- [交互式体系说明](design/AI-dev-harness.html)
+- `design/demos/`：使用截图与演示 Word 文档
+- `design/posters/`：版本特色海报
+
+现行规范以 `design/技术设计-流程模块与交接协议.md` 和 `design/ADR-latest.md` 为准。已失效的阶段性方案不再随源码分发；需要追溯时使用 Git 历史。

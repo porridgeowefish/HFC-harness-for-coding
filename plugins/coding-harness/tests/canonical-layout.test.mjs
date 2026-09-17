@@ -102,7 +102,7 @@ test('package validation rejects legacy empty directories and unexpected folders
   assert.ok(report.directoryViolations.includes('unexpected directory: skills/obsolete-skill/'));
 });
 test('workflow templates reproduce the ten Markdown contracts in the technical design', async () => {
-  const design = await readFile(join(plugin, '../../技术设计-流程模块与交接协议.md'), 'utf8');
+  const design = await readFile(join(plugin, '../../design/技术设计-流程模块与交接协议.md'), 'utf8');
   const sections = [...design.matchAll(/\*\*路径\*\*：`docs\/workflows\/<task-id>\/([^`]+)`(?:(?!\*\*路径\*\*)[\s\S])*?```md\r?\n([\s\S]*?)\r?\n```/g)];
   let count = 0;
   for (const [, name, block] of sections) {

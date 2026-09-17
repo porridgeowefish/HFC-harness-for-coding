@@ -19,9 +19,9 @@ async function collect(root) {
 }
 
 test('current design documents use one generated layout and distinguish the HTML simulation', async () => {
-  const technical = await readFile(join(repository, '技术设计-流程模块与交接协议.md'), 'utf8');
-  const adr = await readFile(join(repository, 'ADR-latest.md'), 'utf8');
-  const html = await readFile(join(repository, 'AI-dev-harness.html'), 'utf8');
+  const technical = await readFile(join(repository, 'design', '技术设计-流程模块与交接协议.md'), 'utf8');
+  const adr = await readFile(join(repository, 'design', 'ADR-latest.md'), 'utf8');
+  const html = await readFile(join(repository, 'design', 'AI-dev-harness.html'), 'utf8');
   for (const token of ['onboarding-checklist.json', 'knowledge-update-review.md', '.gitignore']) {
     assert.match(technical, new RegExp(token.replaceAll('.', '\\.')));
     assert.match(adr, new RegExp(token.replaceAll('.', '\\.')));
